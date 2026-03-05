@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       max_tokens: 1024,
     });
 
-    const output = completion.choices[0]?.message?.content || "Brak wyniku z Groq";
+    const output = completion.choices[0]?.message?.content || "Brak wyniku";
 
     return NextResponse.json({ output });
   } catch (error) {
