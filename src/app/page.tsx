@@ -16,7 +16,7 @@ export default function Home() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Hasło admina – musi być NEXT_PUBLIC_, bo to komponent kliencki
-  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'tymczasowe-haslo-do-testow';
 
   // Debug – sprawdź w konsoli przeglądarki (F12 → Console)
   console.log("Hasło wczytane:", ADMIN_PASSWORD);
