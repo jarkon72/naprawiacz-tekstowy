@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { password } = body;
+  try {
+    const { password } = await req.json();
 
-  if (password === process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ success: true, role: "admin_premium" });
-  } else {
-    return NextResponse.json({ success: false, error: "Błędne hasło" }, { status: 401 });
+    if (password === process.env.ADMIN_PASSWORD) {
+      return NextResponse.json({ success: true });
+    } else {
+      return NextResponse.json({ success: false }, { status: 401 });
+    }
+  } catch (error) {
+    return NextResponse.json({ error: "Błąd serwera" }, { status: 500 });
   }
 }

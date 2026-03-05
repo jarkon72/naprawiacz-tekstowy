@@ -15,11 +15,8 @@ export default function Home() {
   const [dailyWordsUsed, setDailyWordsUsed] = useState(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Hasło admina – musi być NEXT_PUBLIC_, bo to komponent kliencki
-  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'tymczasowe-haslo-do-testow';
-
-  // Debug – sprawdź w konsoli przeglądarki (F12 → Console)
-  console.log("Hasło wczytane:", ADMIN_PASSWORD);
+  // DEBUG – usuń po teście
+  console.log("Hasło wczytane:", process.env.ADMIN_PASSWORD ? "TAK (serwer)" : "NIE WCZYTAŁO SIĘ");
 
   const t = (key: string) => {
     const pl = {
@@ -61,7 +58,6 @@ export default function Home() {
     return lang === "pl" ? pl[key as keyof typeof pl] : en[key as keyof typeof en];
   };
 
-  // Limity słów dziennie
   const limits = {
     free: 1500,
     pro: 10000,
@@ -69,7 +65,6 @@ export default function Home() {
     admin_premium: Infinity,
   };
 
-  // Odczyt licznika z localStorage – TYLKO po stronie klienta
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = localStorage.getItem("dailyWordsUsed");
@@ -93,7 +88,6 @@ export default function Home() {
     }
   }, []);
 
-  // Zapis po każdej zmianie
   useEffect(() => {
     if (typeof window === "undefined") return;
     const today = new Date().toDateString();
@@ -132,7 +126,7 @@ export default function Home() {
       console.error("Błąd:", err);
       let errorMsg = "Błąd przetwarzania";
       if (err.message.includes("Failed to fetch")) {
-        errorMsg = "Ollama nie odpowiada – uruchom 'ollama serve'";
+        errorMsg = "Backend nie odpowiada – sprawdź połączenie";
       } else if (err.message.includes("timeout")) {
         errorMsg = "Przetwarzanie trwało zbyt długo – tekst za długi";
       } else {
@@ -201,7 +195,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Pasek ról – cały pasek zmienia kolor na kolor wybranej roli */}
+      {/* Pasek ról */}
       <div className={`role-bar flex justify-center gap-4 mt-4 flex-wrap rounded-lg p-2 transition-all duration-300 ${
         role === "free" ? "bg-blue-900/30 border border-blue-500/50" :
         role === "pro" ? "bg-green-900/30 border border-green-500/50" :
@@ -211,9 +205,7 @@ export default function Home() {
         <button
           onClick={() => setRole("free")}
           className={`px-6 py-2 rounded-lg font-medium transition-all duration-300 ${
-            role === "free"
-              ? "bg-blue-600 text-white shadow-lg ring-2 ring-blue-400 scale-105"
-              : "bg-gray-800/80 text-gray-300 hover:bg-gray-700"
+            role === "free" ? "bg-blue-600 text-white shadow-lg ring-2 ring-blue-400 scale-105" : "bg-gray-800/80 text-gray-300 hover:bg-gray-700"
           }`}
         >
           Free
@@ -221,9 +213,7 @@ export default function Home() {
         <button
           onClick={() => setRole("pro")}
           className={`px-6 py-2 rounded-lg font-medium transition-all duration-300 ${
-            role === "pro"
-              ? "bg-green-600 text-white shadow-lg ring-2 ring-green-400 scale-105"
-              : "bg-gray-800/80 text-gray-300 hover:bg-gray-700"
+            role === "pro" ? "bg-green-600 text-white shadow-lg ring-2 ring-green-400 scale-105" : "bg-gray-800/80 text-gray-300 hover:bg-gray-700"
           }`}
         >
           Pro
@@ -231,9 +221,7 @@ export default function Home() {
         <button
           onClick={() => setRole("premium")}
           className={`px-6 py-2 rounded-lg font-medium transition-all duration-300 ${
-            role === "premium"
-              ? "bg-purple-600 text-white shadow-lg ring-2 ring-purple-400 scale-105"
-              : "bg-gray-800/80 text-gray-300 hover:bg-gray-700"
+            role === "premium" ? "bg-purple-600 text-white shadow-lg ring-2 ring-purple-400 scale-105" : "bg-gray-800/80 text-gray-300 hover:bg-gray-700"
           }`}
         >
           Premium
@@ -241,21 +229,19 @@ export default function Home() {
         <button
           onClick={() => setShowAdminLogin(true)}
           className={`px-6 py-2 rounded-lg font-medium transition-all duration-300 ${
-            role === "admin_premium"
-              ? "bg-yellow-600 text-white shadow-lg ring-2 ring-yellow-400 scale-105"
-              : "bg-gray-800/80 text-gray-300 hover:bg-gray-700"
+            role === "admin_premium" ? "bg-yellow-600 text-white shadow-lg ring-2 ring-yellow-400 scale-105" : "bg-gray-800/80 text-gray-300 hover:bg-gray-700"
           }`}
         >
           Admin
         </button>
       </div>
 
-      {/* Widoczny debug roli */}
+      {/* Widoczna rola */}
       <div className="text-center mt-2 text-lg font-bold text-yellow-400">
         Aktualna rola: {role.toUpperCase()}
       </div>
 
-      {/* Modal logowania admina */}
+      {/* Modal logowania – teraz przez API */}
       {showAdminLogin && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
           <div className="bg-[#1e293b] p-8 rounded-xl border border-gray-600 max-w-md w-full mx-4">
@@ -269,14 +255,25 @@ export default function Home() {
             />
             <div className="flex gap-4">
               <button
-                onClick={() => {
-                  if (adminPasswordInput === ADMIN_PASSWORD) {
-                    setRole("admin_premium");
-                    setShowAdminLogin(false);
-                    setAdminPasswordInput("");
-                    alert("Zalogowano jako Admin Premium – wszystkie funkcje odblokowane!");
-                  } else {
-                    alert("Błędne hasło");
+                onClick={async () => {
+                  try {
+                    const res = await fetch("/api/login", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ password: adminPasswordInput }),
+                    });
+                    const data = await res.json();
+
+                    if (data.success) {
+                      setRole("admin_premium");
+                      setShowAdminLogin(false);
+                      setAdminPasswordInput("");
+                      alert("Zalogowano jako Admin Premium – wszystkie funkcje odblokowane!");
+                    } else {
+                      alert("Błędne hasło");
+                    }
+                  } catch (err) {
+                    alert("Błąd połączenia z serwerem");
                   }
                 }}
                 className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 text-lg font-medium"
@@ -297,6 +294,7 @@ export default function Home() {
         </div>
       )}
 
+      {/* Reszta UI bez zmian */}
       <div className="editor-grid">
         <div className="panel">
           <div className="panel-header">{t("output")}</div>
@@ -350,19 +348,16 @@ export default function Home() {
         <button onClick={() => handleAction("edytuj")} className="btn btn-edytuj" disabled={loading}>
           {t("edit")}
         </button>
-
         {canShorten && (
           <button onClick={() => handleAction("skroc")} className="btn btn-skroc" disabled={loading}>
             {t("shorten")}
           </button>
         )}
-
         {canFormal && (
           <button onClick={() => handleAction("formalny")} className="btn btn-formalny" disabled={loading}>
             {t("formal")}
           </button>
         )}
-
         {canTranslate && (
           <button onClick={() => handleAction("translate")} className="btn btn-translate" disabled={loading}>
             {t("translate")}
