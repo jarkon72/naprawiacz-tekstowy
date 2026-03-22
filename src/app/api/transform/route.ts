@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+<<<<<<< HEAD
     const { mode, text, model = "trurl-13b-q6:latest" } = body;
 
     if (!text?.trim()) {
@@ -63,5 +64,14 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("[Transform] Błąd:", error);
     return NextResponse.json({ error: "Błąd serwera – sprawdź logi" }, { status: 500 });
+=======
+    return NextResponse.json({
+      output: "TEST OK - backend działa! Otrzymałem tryb: " + (body.mode || "brak")
+    });
+  } catch (e) {
+    return NextResponse.json({ 
+      error: "Błąd testowy: " + (e as Error).message 
+    }, { status: 500 });
+>>>>>>> 83d29340505198f401c47830019c9e5709c51ba8
   }
 }

@@ -23,11 +23,8 @@ html, body {
 /* 🔥 ROOT */
 .app-container {
   height: 100vh;
-  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  box-sizing: border-box;
   overflow: hidden;
 }
 
@@ -36,7 +33,6 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
 }
 
 .title {
@@ -44,95 +40,75 @@ html, body {
   font-weight: bold;
 }
 
-.flags {
-  display: flex;
+/* 🔥 GRID — FINAL */
+.editor-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  min-height: 0;
   gap: 1rem;
 }
 
-.flag-btn {
-  font-size: 2rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  opacity: 0.6;
-}
-
-.flag-btn.active {
-  opacity: 1;
-}
-
-/* 🔥 GRID FIX */
-.editor-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr; /* 🔥 2 kolumny */
-  gap: 1.5rem;
-  flex: 1;
-  overflow: hidden;
-  height: 100%;
-}
-
-/* 🔥 PANEL FIX */
+/* 🔥 PANEL — FINAL */
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1rem;
+
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
 
-  flex: 1;
   min-height: 0;
-  height: 100%; /* 🔥 KLUCZ */
-  box-sizing: border-box;
+  overflow: hidden;
 }
 
+/* HEADER PANEL */
 .panel-header {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 600;
 }
 
-/* TEXTAREA */
+/* 🔥 TEXTAREA WRAPPER */
 .textarea-wrapper {
   flex: 1;
-  position: relative;
+  min-height: 0;
   overflow: hidden;
+
   border-radius: 8px;
   border: 1px solid #475569;
   background: #0f172a;
 }
 
+/* 🔥 TEXTAREA */
 .textarea {
   width: 100%;
   height: 100%;
+
   padding: 1rem;
   background: transparent;
   color: white;
-  font-size: 1.05rem;
-  line-height: 1.6;
+
   resize: none;
   outline: none;
   border: none;
+
   overflow-y: auto;
-  box-sizing: border-box;
 }
 
 /* BUTTONS */
 .actions {
   position: sticky;
   bottom: 0;
-  left: 0;
-  right: 0;
+
   background: rgba(15, 23, 42, 0.98);
-  backdrop-filter: blur(12px);
   padding: 1rem;
-  border-top: 1px solid var(--border);
+
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
   gap: 1rem;
-  z-index: 200;
-  box-shadow: 0 -4px 12px rgba(0,0,0,0.5);
+
+  border-top: 1px solid var(--border);
 }
 
 .btn {
@@ -141,8 +117,6 @@ html, body {
   font-weight: 600;
   cursor: pointer;
   border: none;
-  transition: all 0.2s;
-  min-width: 140px;
 }
 
 .btn-edytuj   { background: var(--edit); color: white; }
@@ -150,27 +124,17 @@ html, body {
 .btn-formalny { background: var(--formal); color: white; }
 .btn-translate { background: var(--translate); color: white; }
 
-.btn:hover:not([disabled]) {
-  filter: brightness(1.15);
-  transform: translateY(-1px);
-}
-
-.btn[disabled] {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 /* COPY / PASTE */
 .copy-btn, .paste-btn {
   position: absolute;
   top: 0.8rem;
   right: 0.8rem;
+
   padding: 0.5rem 1rem;
   border-radius: 6px;
+
   border: none;
   cursor: pointer;
-  font-size: 0.9rem;
-  z-index: 10;
 }
 
 .copy-btn {
@@ -178,70 +142,7 @@ html, body {
   color: white;
 }
 
-.copy-btn:hover {
-  background: #059669;
-}
-
 .paste-btn {
   background: #6366f1;
   color: white;
-}
-
-.paste-btn:hover {
-  background: #4f46e5;
-}
-
-/* MOBILE */
-@media (max-width: 768px) {
-  .app-container {
-    padding: 1rem;
-  }
-
-  .editor-grid {
-    gap: 1rem;
-    grid-template-columns: 1fr; /* mobile stack */
-  }
-
-  .panel {
-    flex: 1;
-    min-height: 0;
-    height: 50vh; /* żeby oba były widoczne */
-  }
-
-  .panel-header {
-    font-size: 1.1rem;
-  }
-
-  .textarea {
-    font-size: 0.95rem;
-    padding: 0.8rem;
-  }
-
-  .actions {
-    padding: 0.8rem;
-    gap: 0.6rem;
-  }
-
-  .btn {
-    padding: 0.65rem 1.2rem;
-    font-size: 0.95rem;
-    min-width: 110px;
-  }
-
-  .copy-btn, .paste-btn {
-    top: 0.6rem;
-    right: 0.6rem;
-    padding: 0.4rem 0.8rem;
-    font-size: 0.8rem;
-  }
-}
-
-select option {
-  background-color: #1e293b !important;
-  color: #f1f5f9 !important;
-}
-
-select:focus option:checked {
-  background-color: #8b5cf6 !important;
-  color: white !important;
 }

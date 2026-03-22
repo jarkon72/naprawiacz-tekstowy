@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
+<<<<<<< HEAD
     const body = await req.json();
     const { password } = body;
 
@@ -34,5 +35,16 @@ export async function POST(req: NextRequest) {
       { success: false, error: "Błąd serwera" },
       { status: 500 }
     );
+=======
+    const { password } = await req.json();
+
+    if (password === process.env.ADMIN_PASSWORD) {
+      return NextResponse.json({ success: true });
+    } else {
+      return NextResponse.json({ success: false }, { status: 401 });
+    }
+  } catch (error) {
+    return NextResponse.json({ error: "Błąd serwera" }, { status: 500 });
+>>>>>>> 83d29340505198f401c47830019c9e5709c51ba8
   }
 }
