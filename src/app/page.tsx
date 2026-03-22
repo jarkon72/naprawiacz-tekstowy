@@ -115,8 +115,8 @@ export default function Home() {
         Aktualna rola: {role.toUpperCase()}
       </div>
 
-      {/* 🔥 GRID */}
-      <div className="editor-grid">
+      {/* 🔥 KLUCZOWA POPRAWKA */}
+      <div className="editor-grid flex-1 min-h-0">
         
         {/* OUTPUT */}
         <div className="panel">
