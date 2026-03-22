@@ -35,25 +35,34 @@ export async function POST(req: NextRequest) {
 
     const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
 
-    const ollamaRes = await fetch(`${ollamaUrl}/api/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        prompt,
-        stream: false,
-        options: { temperature: 0.4 },
-      }),
-    });
+    let response = "";
 
-    if (!ollamaRes.ok) {
-      const err = await ollamaRes.text();
-      console.error("[Transform] Ollama error:", err);
-      return NextResponse.json({ error: err }, { status: 500 });
+    try {
+      const ollamaRes = await fetch(`${ollamaUrl}/api/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          prompt,
+          stream: false,
+          options: { temperature: 0.4 },
+        }),
+      });
+
+      if (ollamaRes.ok) {
+        const data = await ollamaRes.json();
+        response = data.response;
+      } else {
+        const err = await ollamaRes.text();
+        console.error("[Transform] Ollama error:", err);
+      }
+    } catch (e) {
+      console.log("Ollama not available (Vercel)");
     }
 
-    const data = await ollamaRes.json();
-    const response = data.response || "Brak odpowiedzi";
+    if (!response) {
+      response = "Demo (online): " + text;
+    }
 
     console.log("[Transform] Zwrócono:", response.substring(0, 100) + "...");
 
