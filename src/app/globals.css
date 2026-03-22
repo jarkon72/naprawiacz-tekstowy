@@ -20,12 +20,11 @@ html, body {
   color: var(--text);
 }
 
-/* 🔥 ROOT */
+/* ROOT */
 .app-container {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 /* HEADER */
@@ -40,17 +39,20 @@ html, body {
   font-weight: bold;
 }
 
-/* 🔥 GRID — FINAL FIX */
+/* 🔥 FINAL UKŁAD PIONOWY 50/50 */
 .editor-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-
-  height: calc(100vh - 220px); /* 🔥 KLUCZ */
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   gap: 1rem;
 }
 
-/* 🔥 PANEL */
+/* 🔥 PANEL — równe wysokości */
 .panel {
+  flex: 1;
+  min-height: 0;
+
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -58,8 +60,6 @@ html, body {
 
   display: flex;
   flex-direction: column;
-
-  min-height: 0;
   overflow: hidden;
 }
 
