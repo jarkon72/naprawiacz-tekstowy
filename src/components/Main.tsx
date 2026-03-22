@@ -157,4 +157,4 @@ export default function Main() {
       {error && <p className="error-text mt-4">{error}</p>}
     </div>
   );
-}
+}    

@@ -1,20 +1,83 @@
 // src/app/api/transform/prompts/prompt.ts
 
-export function getPrompt(mode: "edytuj" | "skroc" | "formalny" | "translate", text: string): string {
-  const common = `Jesteś precyzyjnym edytorem tekstu. Zwracaj TYLKO poprawiony tekst. Bez komentarzy, bez wyjaśnień, bez wstępów typu "Oto poprawiona wersja".`;
+export function getPrompt(
+  mode: "edytuj" | "skroc" | "formalny" | "translate" | "research",
+  text: string
+): string {
+
+  const common = `Jesteś precyzyjnym edytorem tekstu.
+Zwracaj TYLKO finalny tekst.
+Bez komentarzy, bez wyjaśnień, bez wstępów typu "Oto poprawiona wersja".`;
 
   switch (mode) {
+
     case "edytuj":
-      return `${common}\n\nPopraw błędy gramatyczne, stylistyczne, interpunkcyjne i logiczne w tym tekście:\n\n${text}\n\nZwróć tylko poprawioną wersję.`;
+      return `${common}
+
+Popraw błędy gramatyczne, stylistyczne, interpunkcyjne i logiczne w tym tekście.
+Nie zmieniaj sensu autora.
+
+Tekst:
+${text}
+
+Zwróć tylko poprawioną wersję.`;
 
     case "skroc":
-      return `${common}\n\nSkróć ten tekst do 40–60% oryginalnej długości, zachowując najważniejsze informacje i sens:\n\n${text}\n\nZwróć tylko skróconą wersję.`;
+      return `${common}
+
+Skróć ten tekst do około 40–60% długości.
+Zachowaj główne idee i sens autora.
+
+Tekst:
+${text}
+
+Zwróć tylko skróconą wersję.`;
 
     case "formalny":
-      return `${common}\n\nPrzeredaguj ten tekst na bardziej formalny, profesjonalny język (bez kolokwializmów, slangów, z poprawną gramatyką i strukturą):\n\n${text}\n\nZwróć tylko sformalizowaną wersję.`;
+      return `${common}
+
+Przeredaguj tekst na bardziej formalny i profesjonalny styl.
+Usuń kolokwializmy i uproszczenia językowe.
+
+Tekst:
+${text}
+
+Zwróć tylko sformalizowaną wersję.`;
 
     case "translate":
-      return `${common}\n\nPrzetłumacz ten tekst z polskiego na angielski (lub z angielskiego na polski, jeśli tekst jest po angielsku). Zachowaj sens i styl oryginału:\n\n${text}\n\nZwróć tylko tłumaczenie.`;
+      return `${common}
+
+Przetłumacz tekst:
+- z polskiego na angielski
+- lub z angielskiego na polski
+
+Zachowaj sens i styl oryginału.
+
+Tekst:
+${text}
+
+Zwróć tylko tłumaczenie.`;
+
+    case "research":
+      return `${common}
+
+Twoim zadaniem jest DELIKATNE uzupełnienie tekstu autora o fakty historyczne,
+nazwy instytucji, daty lub wydarzenia, które naturalnie pasują do treści.
+
+ZASADY:
+1.Popraw błędy gramatyczne, stylistyczne, interpunkcyjne i logiczne w tym tekście.
+Nie zmieniaj sensu autora.
+2. Nie zmieniaj stylu autora.
+3. Nie pisz nowego artykułu.
+4. Nie rozwijaj nowych wątków.
+5. Dodawaj tylko krótkie fakty tam, gdzie pasują.
+6. Zachowaj strukturę i ton tekstu.
+7. Jeśli fakt nie jest bezpośrednio związany z tekstem – pomiń go.
+
+Tekst autora:
+${text}
+
+Zwróć tylko poprawiony tekst z ewentualnymi uzupełnieniami.`;
 
     default:
       return text;

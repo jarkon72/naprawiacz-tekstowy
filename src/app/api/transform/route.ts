@@ -1,92 +1,67 @@
+// src/app/api/transform/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getPrompt } from "./prompts/prompt";
-
-const OLLAMA_URL = "http://127.0.0.1:11434/api/generate";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { mode, text, lang = "pl", model, role: clientRole } = body;
+    const { mode, text, model = "trurl-13b-q6:latest" } = body;
 
-    // Walidacja podstawowych danych
     if (!text?.trim()) {
       return NextResponse.json({ error: "Brak tekstu" }, { status: 400 });
     }
 
-    // Prosta autoryzacja roli (można rozbudować)
-    if (mode === "translate" && clientRole !== "premium" && clientRole !== "admin_premium") {
-      return NextResponse.json(
-        { error: "Dostęp do tłumaczenia tylko dla Premium / Admin" },
-        { status: 403 }
-      );
+    console.log("[Transform] Otrzymano:", { mode, model, textLen: text.length });
+
+    let prompt = "";
+
+    switch (mode) {
+      case "edytuj":
+        prompt = `Popraw błędy gramatyczne, stylistyczne i interpunkcyjne w tym tekście po polsku. Zachowaj sens i ton. Zwróć TYLKO poprawioną wersję bez komentarzy:\n\n${text}`;
+        break;
+      case "skroc":
+        prompt = `Skróć tekst do około 40-60% długości, zachowaj najważniejsze informacje. Zwróć TYLKO skróconą wersję:\n\n${text}`;
+        break;
+      case "formalny":
+        prompt = `Przerób tekst na formalny, profesjonalny styl polski. Zwróć TYLKO przeredagowaną wersję:\n\n${text}`;
+        break;
+      case "translate":
+        prompt = `Przetłumacz na angielski, zachowaj sens i ton. Zwróć TYLKO tłumaczenie:\n\n${text}`;
+        break;
+      case "research":
+        prompt = `Uzupełnij fakty jeśli potrzeba, ale nie zmieniaj sensu. Zwróć TYLKO wzbogaconą wersję:\n\n${text}`;
+        break;
+      default:
+        return NextResponse.json({ error: "Nieznany tryb" }, { status: 400 });
     }
 
-    // Wybór modelu z fallbackiem
-    const selectedModel = model || (lang === "pl"
-      ? "speakleash/bielik-11b-v3.0-instruct:q5_k_m"
-      : "qwen2.5:7b-instruct");
+    // ←←← TO JEST JEDYNA ZMIANA ←←←
+    const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
 
-    console.log(`[Ollama] Używam modelu: ${selectedModel}, tryb: ${mode}, długość tekstu: ${text.length}, rola: ${clientRole || "brak"}`);
-
-    const prompt = getPrompt(mode, text);
-
-    // Timeout 10 minut
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 600000);
-
-    const res = await fetch(OLLAMA_URL, {
+    const ollamaRes = await fetch(`${ollamaUrl}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: selectedModel,
+        model,
         prompt,
         stream: false,
-        options: {
-          temperature: 0.4,
-          top_p: 0.9,
-          top_k: 40,
-        },
+        options: { temperature: 0.4 },
       }),
-      signal: controller.signal,
     });
 
-    clearTimeout(timeoutId);
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error("Ollama error:", errorText);
-
-      if (res.status === 404) {
-        return NextResponse.json({
-          error: `Model '${selectedModel}' nie istnieje w Ollamie – sprawdź 'ollama list' i pobierz go.`
-        }, { status: 404 });
-      }
-
-      return NextResponse.json({
-        error: `Błąd Ollamy: ${res.status} – sprawdź, czy serwer działa`
-      }, { status: res.status });
+    if (!ollamaRes.ok) {
+      const err = await ollamaRes.text();
+      console.error("[Transform] Ollama error:", err);
+      return NextResponse.json({ error: err }, { status: 500 });
     }
 
-    const data = await res.json();
-    let corrected = (data.response || "").trim();
+    const data = await ollamaRes.json();
+    const response = data.response || "Brak odpowiedzi";
 
-    // Czyszczenie typowych wstępów modelu
-    corrected = corrected
-      .replace(/^(Oto|Poprawiona wersja|Wynik|Przetłumaczona wersja|Odpowiedź).*?[:\-–—\n]/gi, "")
-      .trim();
+    console.log("[Transform] Zwrócono:", response.substring(0, 100) + "...");
 
-    return NextResponse.json({ output: corrected || "Brak wyniku" });
-  } catch (err: any) {
-    console.error("Backend error:", err.message, err.stack);
-
-    if (err.name === "AbortError") {
-      return NextResponse.json({
-        error: "Przetwarzanie trwało zbyt długo (timeout 10 min) – tekst jest bardzo długi. Skróć go lub użyj mniejszego modelu."
-      }, { status: 504 });
-    }
-
-    return NextResponse.json({
-      error: err.message || "Błąd serwera – sprawdź Ollamę i logi"
-    }, { status: 500 });
+    return NextResponse.json({ output: response.trim() });
+  } catch (error) {
+    console.error("[Transform] Błąd:", error);
+    return NextResponse.json({ error: "Błąd serwera – sprawdź logi" }, { status: 500 });
   }
 }
