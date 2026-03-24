@@ -1,15 +1,14 @@
 "use client";
-
 import { useEffect, useState, useRef } from "react";
 
-type Mode = "edytuj" | "skroc" | "formalny" | "translate";
+type Mode = "edytuj" | "skroc" | "formalny" | "translate" | "research";
 
 export default function Home() {
-  const [lang] = useState<"pl" | "en">("pl");
+  const [lang, setLang] = useState<"pl" | "en">("pl");
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [role, setRole] = useState<"free" | "pro" | "premium" | "admin_premium">("free");
+  const [role, setRole] = useState<"free" | "standard" | "pro" | "premium" | "admin_premium">("free");
   const [dailyWordsUsed, setDailyWordsUsed] = useState(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -22,19 +21,42 @@ export default function Home() {
       shorten: "Skróć",
       formal: "Sformalizuj",
       translate: "Przetłumacz",
+      research: "Research (uzupełnij fakty)",
       loading: "Przetwarzam...",
       noText: "Wpisz tekst!",
       copy: "Kopiuj",
       paste: "Wklej",
       chars: "znaków",
       words: "słów",
-      dailyLimitReached: "Limit osiągnięty",
+      dailyLimitReached: "Limit dzienny osiągnięty",
+      standard: "Standard",
+      adminBtn: "Wejdź jako Admin (bez hasła)",
     };
-    return pl[key as keyof typeof pl];
+    const en = {
+      title: "Text Corrector",
+      input: "Input text",
+      output: "Output text",
+      edit: "Edit",
+      shorten: "Shorten",
+      formal: "Formalize",
+      translate: "Translate",
+      research: "Research (add facts)",
+      loading: "Processing...",
+      noText: "Enter text!",
+      copy: "Copy",
+      paste: "Paste",
+      chars: "chars",
+      words: "words",
+      dailyLimitReached: "Daily limit reached",
+      standard: "Standard",
+      adminBtn: "Enter as Admin",
+    };
+    return lang === "pl" ? pl[key as keyof typeof pl] : en[key as keyof typeof en];
   };
 
   const limits = {
     free: 1500,
+    standard: 5000,
     pro: 10000,
     premium: 50000,
     admin_premium: Infinity,
@@ -42,7 +64,12 @@ export default function Home() {
 
   const enterAsAdmin = () => {
     setRole("admin_premium");
-    alert("Admin Premium aktywny");
+    alert(lang === "pl" ? "Admin Premium aktywny" : "Admin Premium activated");
+  };
+
+  const setStandardRole = () => {
+    setRole("standard");
+    alert(lang === "pl" ? "Konto Standard aktywne" : "Standard account activated");
   };
 
   useEffect(() => {
@@ -66,20 +93,32 @@ export default function Home() {
       const res = await fetch("/api/transform", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, text: input }),
+        body: JSON.stringify({ mode, text: input, lang, role }),
       });
 
       const data = await res.json();
-      setOutput(data.output || "Brak wyniku");
-      setDailyWordsUsed(prev => prev + wordCount);
-    } catch {
-      setOutput("Błąd połączenia");
+
+      if (!res.ok) {
+        throw new Error(data.error || `Błąd serwera (${res.status})`);
+      }
+
+      setOutput(data.output || (lang === "pl" ? "Brak wyniku" : "No result"));
+      setDailyWordsUsed((prev) => prev + wordCount);
+    } catch (err: any) {
+      console.error(err);
+      setOutput(
+        lang === "pl"
+          ? `Błąd: ${err.message || "Problem z serwerem (500)"}`
+          : `Error: ${err.message || "Server error (500)"}`
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  const copyOutput = () => navigator.clipboard.writeText(output);
+  const copyOutput = () => {
+    if (output) navigator.clipboard.writeText(output);
+  };
 
   const pasteInput = async () => {
     try {
@@ -88,9 +127,9 @@ export default function Home() {
     } catch {}
   };
 
-  const stats = (t: string) => ({
-    chars: t.length,
-    words: t.trim().split(/\s+/).filter(Boolean).length,
+  const stats = (text: string) => ({
+    chars: text.length,
+    words: text.trim().split(/\s+/).filter(Boolean).length,
   });
 
   const inputStats = stats(input);
@@ -100,85 +139,114 @@ export default function Home() {
     <div className="app-container">
       <div className="header">
         <h1 className="title">{t("title")}</h1>
+
+        {/* FLAGS – zawsze widoczne */}
+        <div className="flags">
+          <button
+            onClick={() => setLang("pl")}
+            className={`flag-btn ${lang === "pl" ? "active" : ""}`}
+          >
+            🇵🇱
+          </button>
+          <button
+            onClick={() => setLang("en")}
+            className={`flag-btn ${lang === "en" ? "active" : ""}`}
+          >
+            🇬🇧
+          </button>
+        </div>
       </div>
 
-      <div className="flex justify-center mt-4">
+      <div className="flex justify-center mt-4 gap-3">
         <button
           onClick={enterAsAdmin}
           className="px-6 py-2 bg-yellow-600 text-white rounded"
         >
-          Wejdź jako Admin (bez hasła)
+          {t("adminBtn")}
+        </button>
+        <button
+          onClick={setStandardRole}
+          className="px-6 py-2 bg-green-600 text-white rounded"
+        >
+          {t("standard")}
         </button>
       </div>
 
       <div className="text-center mt-2 text-yellow-400 font-bold">
-        Aktualna rola: {role.toUpperCase()}
+        {lang === "pl" ? "Aktualna rola:" : "Current role:"} {role.toUpperCase()}
       </div>
 
-      {/* 🔥 KLUCZOWA POPRAWKA */}
       <div className="editor-grid flex-1 min-h-0">
-        
-        {/* OUTPUT */}
+        {/* WYJŚCIE – stały rozmiar + scroll */}
         <div className="panel">
           <div className="panel-header">{t("output")}</div>
-
-          <div className="textarea-wrapper">
-            <div className="textarea whitespace-pre-wrap">
-              {loading ? t("loading") : output || "Tu pojawi się wynik"}
+          <div className="textarea-wrapper output-wrapper">
+            <div className="textarea whitespace-pre-wrap overflow-y-auto max-h-[320px]">
+              {loading
+                ? t("loading")
+                : output || (lang === "pl" ? "Tu pojawi się wynik" : "Result will appear here")
+              }
             </div>
-
-            {output && (
+            {output && !loading && (
               <button onClick={copyOutput} className="copy-btn">
                 {t("copy")}
               </button>
             )}
           </div>
-
           <div className="counter">
             {t("chars")}: {outputStats.chars} | {t("words")}: {outputStats.words}
           </div>
         </div>
 
-        {/* INPUT */}
+        {/* WEJŚCIE */}
         <div className="panel">
           <div className="panel-header">{t("input")}</div>
-
           <div className="textarea-wrapper">
             <textarea
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               className="textarea"
+              placeholder={lang === "pl" ? "Wpisz lub wklej tekst tutaj..." : "Type or paste text here..."}
             />
-
             <button onClick={pasteInput} className="paste-btn">
               {t("paste")}
             </button>
           </div>
-
           <div className="counter">
             {t("chars")}: {inputStats.chars} | {t("words")}: {inputStats.words}
           </div>
         </div>
       </div>
 
-      {/* ACTIONS */}
       <div className="actions">
-        <button onClick={() => handleAction("edytuj")} className="btn btn-edytuj">
+        <button onClick={() => handleAction("edytuj")} className="btn btn-edytuj" disabled={loading}>
           {t("edit")}
         </button>
 
-        <button onClick={() => handleAction("skroc")} className="btn btn-skroc">
-          {t("shorten")}
-        </button>
+        {(role === "standard" || role === "pro" || role === "premium" || role === "admin_premium") && (
+          <button onClick={() => handleAction("skroc")} className="btn btn-skroc" disabled={loading}>
+            {t("shorten")}
+          </button>
+        )}
 
-        <button onClick={() => handleAction("formalny")} className="btn btn-formalny">
-          {t("formal")}
-        </button>
+        {(role === "pro" || role === "premium" || role === "admin_premium") && (
+          <button onClick={() => handleAction("formalny")} className="btn btn-formalny" disabled={loading}>
+            {t("formal")}
+          </button>
+        )}
 
-        <button onClick={() => handleAction("translate")} className="btn btn-translate">
-          {t("translate")}
-        </button>
+        {(role === "premium" || role === "admin_premium") && (
+          <button onClick={() => handleAction("translate")} className="btn btn-translate" disabled={loading}>
+            {t("translate")}
+          </button>
+        )}
+
+        {role === "admin_premium" && (
+          <button onClick={() => handleAction("research")} className="btn btn-translate" disabled={loading}>
+            {t("research")}
+          </button>
+        )}
       </div>
     </div>
   );
