@@ -13,6 +13,8 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  const ADMIN_PASSWORD = "admin123"; // ← ZMIEŃ NA SWOJE HASŁO JEŚLI CHCESZ
+
   const t = (key: string) => {
     const pl = {
       title: "Poprawiacz tekstu",
@@ -33,6 +35,9 @@ export default function Home() {
       dailyLimitReached: "Limit dzienny osiągnięty",
       standard: "Standard",
       adminBtn: "Wejdź jako Admin (bez hasła)",
+      enterPassword: "Podaj hasło Administratora:",
+      wrongPassword: "Nieprawidłowe hasło!",
+      adminActivated: "Admin Premium aktywny",
     };
     const en = {
       title: "Text Corrector",
@@ -53,6 +58,9 @@ export default function Home() {
       dailyLimitReached: "Daily limit reached",
       standard: "Standard",
       adminBtn: "Enter as Admin",
+      enterPassword: "Enter Admin password:",
+      wrongPassword: "Wrong password!",
+      adminActivated: "Admin Premium activated",
     };
     return lang === "pl" ? pl[key as keyof typeof pl] : en[key as keyof typeof en];
   };
@@ -66,8 +74,15 @@ export default function Home() {
   };
 
   const enterAsAdmin = () => {
-    setRole("admin_premium");
-    alert(lang === "pl" ? "Admin Premium aktywny" : "Admin Premium activated");
+    const password = prompt(t("enterPassword"));
+    if (password === null) return; // użytkownik kliknął Anuluj
+
+    if (password === ADMIN_PASSWORD) {
+      setRole("admin_premium");
+      alert(t("adminActivated"));
+    } else {
+      alert(t("wrongPassword"));
+    }
   };
 
   const setStandardRole = () => {
@@ -131,13 +146,11 @@ export default function Home() {
     }
   };
 
-  // Poprawiona funkcja Wklej
   const pasteInput = async () => {
     try {
       const text = await navigator.clipboard.readText();
       if (text.trim()) {
         setInput(text);
-        // Opcjonalnie: focus na textarea po wklejeniu
         inputRef.current?.focus();
       } else {
         alert(lang === "pl" ? "Schowek jest pusty" : "Clipboard is empty");
@@ -172,10 +185,16 @@ export default function Home() {
       </div>
 
       <div className="flex justify-center mt-4 gap-3">
-        <button onClick={enterAsAdmin} className="px-6 py-2 bg-yellow-600 text-white rounded">
+        <button
+          onClick={enterAsAdmin}
+          className="px-6 py-2 bg-yellow-600 text-white rounded"
+        >
           {t("adminBtn")}
         </button>
-        <button onClick={setStandardRole} className="px-6 py-2 bg-green-600 text-white rounded">
+        <button
+          onClick={setStandardRole}
+          className="px-6 py-2 bg-green-600 text-white rounded"
+        >
           {t("standard")}
         </button>
       </div>
@@ -185,7 +204,6 @@ export default function Home() {
       </div>
 
       <div className="editor-grid flex-1 min-h-0">
-        {/* WYJŚCIE */}
         <div className="panel">
           <div className="panel-header">{t("output")}</div>
           <div className="textarea-wrapper output-wrapper">
@@ -203,7 +221,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* WEJŚCIE */}
         <div className="panel">
           <div className="panel-header">{t("input")}</div>
           <div className="textarea-wrapper">
