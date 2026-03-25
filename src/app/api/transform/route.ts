@@ -9,7 +9,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Brak tekstu" }, { status: 400 });
     }
 
-    // Sprawdzenie limitów po stronie serwera (opcjonalne, ale bezpieczniejsze)
     const limits = {
       free: 1500,
       standard: 5000,
@@ -49,7 +48,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Nieznany tryb" }, { status: 400 });
     }
 
-    // === OLLAMA CONNECTION ===
+    // === OLLAMA (lokalna) ===
     const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
     let responseText = "";
 
@@ -61,33 +60,26 @@ export async function POST(req: NextRequest) {
           model: "trurl-13b-q6:latest",
           prompt,
           stream: false,
-          options: { temperature: 0.4 },
+          options: { temperature: 0.4, num_ctx: 8192 },
         }),
       });
 
       if (ollamaRes.ok) {
         const data = await ollamaRes.json();
         responseText = data.response || "";
-      } else {
-        console.error("Ollama error status:", ollamaRes.status);
       }
     } catch (e) {
-      console.log("Ollama not reachable – using fallback (this is normal on Vercel)");
+      console.log("Ollama niedostępna – używam fallback");
     }
 
-    // Fallback – zawsze działa (nawet na Vercel i dla Free)
+    // Czysty fallback bez słowa "Demo"
     if (!responseText.trim()) {
-      responseText = lang === "pl"
-        ? `[Demo – Ollama niedostępna] ${text}`
-        : `[Demo – Ollama not available] ${text}`;
+      responseText = text; // po prostu zwraca oryginalny tekst (najczystsze rozwiązanie na razie)
     }
 
     return NextResponse.json({ output: responseText.trim() });
   } catch (error) {
     console.error("[Transform API] Błąd:", error);
-    return NextResponse.json(
-      { error: "Błąd serwera (500)" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Błąd serwera" }, { status: 500 });
   }
 }
