@@ -42,39 +42,52 @@ export async function POST(req: NextRequest) {
         prompt = `Przetłumacz tekst na język angielski, zachowaj sens i ton. Zwróć TYLKO tłumaczenie:\n\n${text}`;
         break;
       case "research":
-        prompt = `Uzupełnij brakujące fakty i dane w tekście, zachowując styl autora. Zwróć TYLKO wzbogaconą wersję:\n\n${text}`;
+        prompt = `Uzupełnij brakujące fakty i dane w tekście, zachowując dokładnie styl autora. Dodaj wiarygodne informacje, daty, nazwy własne jeśli potrzeba. Zwróć TYLKO wzbogaconą wersję bez komentarzy:\n\n${text}`;
         break;
       default:
         return NextResponse.json({ error: "Nieznany tryb" }, { status: 400 });
     }
 
-    // === OLLAMA (lokalna) ===
-    const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
+    // ==================== OLLAMA DLA ADMINA ====================
     let responseText = "";
 
-    try {
-      const ollamaRes = await fetch(`${ollamaUrl}/api/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "trurl-13b-q6:latest",
-          prompt,
-          stream: false,
-          options: { temperature: 0.4, num_ctx: 8192 },
-        }),
-      });
+    if (role === "admin_premium" && mode === "research") {
+      const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
 
-      if (ollamaRes.ok) {
-        const data = await ollamaRes.json();
-        responseText = data.response || "";
+      try {
+        const ollamaRes = await fetch(`${ollamaUrl}/api/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "trurl-13b-q6:latest",
+            prompt,
+            stream: false,
+            options: { 
+              temperature: 0.3,
+              num_ctx: 8192 
+            },
+          }),
+        });
+
+        if (ollamaRes.ok) {
+          const data = await ollamaRes.json();
+          responseText = data.response || "";
+        } else {
+          console.error("Ollama error:", ollamaRes.status);
+        }
+      } catch (e) {
+        console.log("Ollama niedostępna (normalne na Vercel)");
       }
-    } catch (e) {
-      console.log("Ollama niedostępna – używam fallback");
     }
 
-    // Czysty fallback bez słowa "Demo"
+    // Fallback dla Research (Admin)
+    if (role === "admin_premium" && mode === "research" && !responseText.trim()) {
+      responseText = `[Ollama niedostępna]\n\nUruchom Ollamę lokalnie na swoim komputerze (ollama serve) i spróbuj ponownie.\n\nOryginalny tekst:\n${text}`;
+    }
+
+    // Normalny fallback dla innych trybów i użytkowników
     if (!responseText.trim()) {
-      responseText = text; // po prostu zwraca oryginalny tekst (najczystsze rozwiązanie na razie)
+      responseText = text;   // zwracamy oryginalny tekst (czysto)
     }
 
     return NextResponse.json({ output: responseText.trim() });
