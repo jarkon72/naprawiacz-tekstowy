@@ -13,7 +13,7 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const ADMIN_PASSWORD = "admin123"; // ← ZMIEŃ NA SWOJE HASŁO JEŚLI CHCESZ
+  const ADMIN_PASSWORD = "admin123";   // ← ZMIEŃ NA SWOJE HASŁO, JEŚLI CHCESZ
 
   const t = (key: string) => {
     const pl = {
@@ -34,7 +34,7 @@ export default function Home() {
       words: "słów",
       dailyLimitReached: "Limit dzienny osiągnięty",
       standard: "Standard",
-      adminBtn: "Wejdź jako Admin (bez hasła)",
+      adminBtn: "Wejdź jako Admin",           // ← zmienione – już bez "(bez hasła)"
       enterPassword: "Podaj hasło Administratora:",
       wrongPassword: "Nieprawidłowe hasło!",
       adminActivated: "Admin Premium aktywny",
@@ -75,7 +75,7 @@ export default function Home() {
 
   const enterAsAdmin = () => {
     const password = prompt(t("enterPassword"));
-    if (password === null) return; // użytkownik kliknął Anuluj
+    if (password === null) return; // kliknął Anuluj
 
     if (password === ADMIN_PASSWORD) {
       setRole("admin_premium");
@@ -116,18 +116,15 @@ export default function Home() {
 
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || `Błąd serwera (${res.status})`);
-      }
+      if (!res.ok) throw new Error(data.error || `Błąd serwera (${res.status})`);
 
       setOutput(data.output || (lang === "pl" ? "Brak wyniku" : "No result"));
       setDailyWordsUsed((prev) => prev + wordCount);
     } catch (err: any) {
       console.error(err);
-      setOutput(
-        lang === "pl"
-          ? `Błąd: ${err.message || "Problem z serwerem (500)"}`
-          : `Error: ${err.message || "Server error (500)"}`
+      setOutput(lang === "pl" 
+        ? `Błąd: ${err.message || "Problem z serwerem"}` 
+        : `Error: ${err.message || "Server error"}`
       );
     } finally {
       setLoading(false);
@@ -140,8 +137,7 @@ export default function Home() {
       await navigator.clipboard.writeText(output);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
+    } catch {
       alert(lang === "pl" ? "Nie udało się skopiować" : "Failed to copy");
     }
   };
@@ -155,9 +151,8 @@ export default function Home() {
       } else {
         alert(lang === "pl" ? "Schowek jest pusty" : "Clipboard is empty");
       }
-    } catch (err) {
-      console.error("Paste failed:", err);
-      alert(lang === "pl" ? "Nie udało się wkleić tekstu" : "Failed to paste text");
+    } catch {
+      alert(lang === "pl" ? "Nie udało się wkleić" : "Failed to paste");
     }
   };
 
