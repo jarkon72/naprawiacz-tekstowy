@@ -10,6 +10,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState<"free" | "standard" | "pro" | "premium" | "admin_premium">("free");
   const [dailyWordsUsed, setDailyWordsUsed] = useState(0);
+  const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const t = (key: string) => {
@@ -25,6 +26,7 @@ export default function Home() {
       loading: "Przetwarzam...",
       noText: "Wpisz tekst!",
       copy: "Kopiuj",
+      copied: "Skopiowano!",
       paste: "Wklej",
       chars: "znaków",
       words: "słów",
@@ -44,6 +46,7 @@ export default function Home() {
       loading: "Processing...",
       noText: "Enter text!",
       copy: "Copy",
+      copied: "Copied!",
       paste: "Paste",
       chars: "chars",
       words: "words",
@@ -116,8 +119,19 @@ export default function Home() {
     }
   }
 
-  const copyOutput = () => {
-    if (output) navigator.clipboard.writeText(output);
+  const copyOutput = async () => {
+    if (!output) return;
+    
+    try {
+      await navigator.clipboard.writeText(output);
+      setCopied(true);
+      
+      // Reset komunikatu po 2 sekundach
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+      alert(lang === "pl" ? "Nie udało się skopiować" : "Failed to copy");
+    }
   };
 
   const pasteInput = async () => {
@@ -140,7 +154,7 @@ export default function Home() {
       <div className="header">
         <h1 className="title">{t("title")}</h1>
 
-        {/* FLAGS – zawsze widoczne */}
+        {/* FLAGS */}
         <div className="flags">
           <button
             onClick={() => setLang("pl")}
@@ -177,7 +191,7 @@ export default function Home() {
       </div>
 
       <div className="editor-grid flex-1 min-h-0">
-        {/* WYJŚCIE – stały rozmiar + scroll */}
+        {/* PANEL WYJŚCIOWY */}
         <div className="panel">
           <div className="panel-header">{t("output")}</div>
           <div className="textarea-wrapper output-wrapper">
@@ -187,9 +201,10 @@ export default function Home() {
                 : output || (lang === "pl" ? "Tu pojawi się wynik" : "Result will appear here")
               }
             </div>
+            
             {output && !loading && (
               <button onClick={copyOutput} className="copy-btn">
-                {t("copy")}
+                {copied ? t("copied") : t("copy")}
               </button>
             )}
           </div>
@@ -198,7 +213,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* WEJŚCIE */}
+        {/* PANEL WEJŚCIOWY */}
         <div className="panel">
           <div className="panel-header">{t("input")}</div>
           <div className="textarea-wrapper">
