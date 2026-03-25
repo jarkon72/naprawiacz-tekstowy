@@ -121,12 +121,9 @@ export default function Home() {
 
   const copyOutput = async () => {
     if (!output) return;
-    
     try {
       await navigator.clipboard.writeText(output);
       setCopied(true);
-      
-      // Reset komunikatu po 2 sekundach
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
@@ -134,11 +131,21 @@ export default function Home() {
     }
   };
 
+  // Poprawiona funkcja Wklej
   const pasteInput = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      setInput(text);
-    } catch {}
+      if (text.trim()) {
+        setInput(text);
+        // Opcjonalnie: focus na textarea po wklejeniu
+        inputRef.current?.focus();
+      } else {
+        alert(lang === "pl" ? "Schowek jest pusty" : "Clipboard is empty");
+      }
+    } catch (err) {
+      console.error("Paste failed:", err);
+      alert(lang === "pl" ? "Nie udało się wkleić tekstu" : "Failed to paste text");
+    }
   };
 
   const stats = (text: string) => ({
@@ -154,34 +161,21 @@ export default function Home() {
       <div className="header">
         <h1 className="title">{t("title")}</h1>
 
-        {/* FLAGS */}
         <div className="flags">
-          <button
-            onClick={() => setLang("pl")}
-            className={`flag-btn ${lang === "pl" ? "active" : ""}`}
-          >
+          <button onClick={() => setLang("pl")} className={`flag-btn ${lang === "pl" ? "active" : ""}`}>
             🇵🇱
           </button>
-          <button
-            onClick={() => setLang("en")}
-            className={`flag-btn ${lang === "en" ? "active" : ""}`}
-          >
+          <button onClick={() => setLang("en")} className={`flag-btn ${lang === "en" ? "active" : ""}`}>
             🇬🇧
           </button>
         </div>
       </div>
 
       <div className="flex justify-center mt-4 gap-3">
-        <button
-          onClick={enterAsAdmin}
-          className="px-6 py-2 bg-yellow-600 text-white rounded"
-        >
+        <button onClick={enterAsAdmin} className="px-6 py-2 bg-yellow-600 text-white rounded">
           {t("adminBtn")}
         </button>
-        <button
-          onClick={setStandardRole}
-          className="px-6 py-2 bg-green-600 text-white rounded"
-        >
+        <button onClick={setStandardRole} className="px-6 py-2 bg-green-600 text-white rounded">
           {t("standard")}
         </button>
       </div>
@@ -191,17 +185,13 @@ export default function Home() {
       </div>
 
       <div className="editor-grid flex-1 min-h-0">
-        {/* PANEL WYJŚCIOWY */}
+        {/* WYJŚCIE */}
         <div className="panel">
           <div className="panel-header">{t("output")}</div>
           <div className="textarea-wrapper output-wrapper">
             <div className="textarea whitespace-pre-wrap overflow-y-auto max-h-[320px]">
-              {loading
-                ? t("loading")
-                : output || (lang === "pl" ? "Tu pojawi się wynik" : "Result will appear here")
-              }
+              {loading ? t("loading") : output || (lang === "pl" ? "Tu pojawi się wynik" : "Result will appear here")}
             </div>
-            
             {output && !loading && (
               <button onClick={copyOutput} className="copy-btn">
                 {copied ? t("copied") : t("copy")}
@@ -213,7 +203,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* PANEL WEJŚCIOWY */}
+        {/* WEJŚCIE */}
         <div className="panel">
           <div className="panel-header">{t("input")}</div>
           <div className="textarea-wrapper">
