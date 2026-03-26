@@ -11,11 +11,11 @@ export async function POST(req: NextRequest) {
 
     let prompt = "";
     if (mode === "research") {
-      prompt = `Uzupełnij brakujące fakty i dane w tekście. Zachowaj dokładnie styl autora, ton i sposób pisania. Dodaj konkretne informacje, daty, nazwy własne, kontekst historyczny jeśli pasuje. Zwróć TYLKO wzbogaconą wersję tekstu, bez żadnych komentarzy, oznaczeń ani słów "Demo":\n\n${text}`;
+      prompt = `Uzupełnij brakujące fakty i dane w tekście. Zachowaj dokładnie styl autora, ton i sposób pisania. Dodaj konkretne informacje, daty, nazwy własne jeśli pasuje. Zwróć TYLKO wzbogaconą wersję tekstu, bez żadnych komentarzy i oznaczeń:\n\n${text}`;
     } else if (mode === "edytuj") {
-      prompt = `Popraw błędy gramatyczne, stylistyczne i interpunkcyjne. Zachowaj sens i ton oryginalnego tekstu. Zwróć TYLKO poprawioną wersję:\n\n${text}`;
+      prompt = `Popraw błędy gramatyczne, stylistyczne i interpunkcyjne. Zachowaj sens i ton. Zwróć TYLKO poprawioną wersję:\n\n${text}`;
     } else if (mode === "skroc") {
-      prompt = `Skróć tekst zachowując najważniejsze informacje. Zwróć TYLKO skróconą wersję:\n\n${text}`;
+      prompt = `Skróć tekst do około 50% długości, zachowując najważniejsze informacje. Zwróć TYLKO skróconą wersję:\n\n${text}`;
     } else if (mode === "formalny") {
       prompt = `Przerób tekst na formalny, profesjonalny styl polski. Zwróć TYLKO przeredagowaną wersję:\n\n${text}`;
     } else if (mode === "translate") {
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     let responseText = "";
 
-    // Research tylko dla Admina - używamy lokalnej Ollamy
+    // === RESEARCH DLA ADMINA - bezpośrednie połączenie z lokalną Ollamą ===
     if (role === "admin_premium" && mode === "research") {
       try {
         const ollamaRes = await fetch("http://127.0.0.1:11434/api/generate", {
@@ -45,16 +45,16 @@ export async function POST(req: NextRequest) {
           responseText = data.response?.trim() || "";
         }
       } catch (e) {
-        console.log("Nie udało się połączyć z lokalną Ollamą");
+        console.log("Nie udało się połączyć z Ollamą na http://127.0.0.1:11434");
       }
     }
 
-    // Jeśli Ollama nie odpowiedziała przy Research dla Admina
+    // Fallback jeśli Ollama nie odpowiedziała przy Research
     if (role === "admin_premium" && mode === "research" && !responseText) {
-      responseText = `[Ollama działa, ale nie odpowiedziała]\n\nSpróbuj ponownie za chwilę.\n\nOryginalny tekst:\n${text}`;
+      responseText = `[Ollama nie odpowiedziała]\n\nUpewnij się, że Ollama jest uruchomiona w tle (ollama serve lub działa jako usługa).\n\nOryginalny tekst:\n${text}`;
     }
 
-    // Domyślny fallback dla wszystkich innych przypadków
+    // Domyślny fallback dla reszty
     if (!responseText) {
       responseText = text;
     }
