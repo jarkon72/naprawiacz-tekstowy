@@ -1,5 +1,3 @@
-<h1 style={{color:"red"}}>TEST BUILD 777</h1>
-
 "use client";
 import { useEffect, useState, useRef } from "react";
 
@@ -98,89 +96,92 @@ export default function Home() {
   const outputStats = stats(output);
 
   return (
-    <div className="app-container">
-      <div className="header">
-        <h1 className="title">{t("title")}</h1>
-      </div>
+    <>
+      <h1 style={{color:"red"}}>TEST BUILD 777</h1>
 
-      <div className="flex justify-center mt-4">
-        <button
-          onClick={enterAsAdmin}
-          className="px-6 py-2 bg-yellow-600 text-white rounded"
-        >
-          Wejdź jako Admin (bez hasła)
-        </button>
-      </div>
-
-      <div className="text-center mt-2 text-yellow-400 font-bold">
-        Aktualna rola: {role.toUpperCase()}
-      </div>
-
-      {/* 🔥 KLUCZOWA POPRAWKA */}
-      <div className="editor-grid flex-1 min-h-0">
-        
-        {/* OUTPUT */}
-        <div className="panel">
-          <div className="panel-header">{t("output")}</div>
-
-          <div className="textarea-wrapper">
-            <div className="textarea whitespace-pre-wrap">
-              {loading ? t("loading") : output || "Tu pojawi się wynik"}
-            </div>
-
-            {output && (
-              <button onClick={copyOutput} className="copy-btn">
-                {t("copy")}
-              </button>
-            )}
-          </div>
-
-          <div className="counter">
-            {t("chars")}: {outputStats.chars} | {t("words")}: {outputStats.words}
-          </div>
+      <div className="app-container">
+        <div className="header">
+          <h1 className="title">{t("title")}</h1>
         </div>
 
-        {/* INPUT */}
-        <div className="panel">
-          <div className="panel-header">{t("input")}</div>
-
-          <div className="textarea-wrapper">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              className="textarea"
-            />
-
-            <button onClick={pasteInput} className="paste-btn">
-              {t("paste")}
+        {/* 🔥 ADMIN BUTTON FIX */}
+        {role === "admin_premium" && (
+          <div className="flex justify-center mt-4">
+            <button
+              onClick={enterAsAdmin}
+              className="px-6 py-2 bg-yellow-600 text-white rounded"
+            >
+              Admin Panel
             </button>
           </div>
+        )}
 
-          <div className="counter">
-            {t("chars")}: {inputStats.chars} | {t("words")}: {inputStats.words}
+        <div className="text-center mt-2 text-yellow-400 font-bold">
+          Aktualna rola: {role.toUpperCase()}
+        </div>
+
+        <div className="editor-grid flex-1 min-h-0">
+
+          <div className="panel">
+            <div className="panel-header">{t("output")}</div>
+
+            <div className="textarea-wrapper">
+              <div className="textarea whitespace-pre-wrap">
+                {loading ? t("loading") : output || "Tu pojawi się wynik"}
+              </div>
+
+              {output && (
+                <button onClick={copyOutput} className="copy-btn">
+                  {t("copy")}
+                </button>
+              )}
+            </div>
+
+            <div className="counter">
+              {t("chars")}: {outputStats.chars} | {t("words")}: {outputStats.words}
+            </div>
+          </div>
+
+          <div className="panel">
+            <div className="panel-header">{t("input")}</div>
+
+            <div className="textarea-wrapper">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                className="textarea"
+              />
+
+              <button onClick={pasteInput} className="paste-btn">
+                {t("paste")}
+              </button>
+            </div>
+
+            <div className="counter">
+              {t("chars")}: {inputStats.chars} | {t("words")}: {inputStats.words}
+            </div>
           </div>
         </div>
+
+        <div className="actions">
+          <button onClick={() => handleAction("edytuj")} className="btn btn-edytuj">
+            {t("edit")}
+          </button>
+
+          <button onClick={() => handleAction("skroc")} className="btn btn-skroc">
+            {t("shorten")}
+          </button>
+
+          <button onClick={() => handleAction("formalny")} className="btn btn-formalny">
+            {t("formal")}
+          </button>
+
+          <button onClick={() => handleAction("translate")} className="btn btn-translate">
+            {t("translate")}
+          </button>
+        </div>
       </div>
-
-      {/* ACTIONS */}
-      <div className="actions">
-        <button onClick={() => handleAction("edytuj")} className="btn btn-edytuj">
-          {t("edit")}
-        </button>
-
-        <button onClick={() => handleAction("skroc")} className="btn btn-skroc">
-          {t("shorten")}
-        </button>
-
-        <button onClick={() => handleAction("formalny")} className="btn btn-formalny">
-          {t("formal")}
-        </button>
-
-        <button onClick={() => handleAction("translate")} className="btn btn-translate">
-          {t("translate")}
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
