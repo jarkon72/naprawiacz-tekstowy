@@ -8,7 +8,8 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [role, setRole] = useState<"free" | "pro" | "premium" | "admin_premium">("free");
+  const [role, setRole] = useState<
+  "free" | "day" | "standard" | "pro" | "premium" | "admin_premium">("free");
   const [dailyWordsUsed, setDailyWordsUsed] = useState(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -33,11 +34,13 @@ export default function Home() {
   };
 
   const limits = {
-    free: 1500,
-    pro: 10000,
-    premium: 50000,
-    admin_premium: Infinity,
-  };
+  free: 1500,
+  day: 8000,
+  standard: 10000,
+  pro: 25000,
+  premium: 50000,
+  admin_premium: Infinity,
+};
 
   const enterAsAdmin = () => {
     setRole("admin_premium");
@@ -96,12 +99,18 @@ export default function Home() {
   const outputStats = stats(output);
 
   return (
-    <>
-      <h1 style={{color:"red"}}>TEST BUILD 777</h1>
 
       <div className="app-container">
         <div className="header">
           <h1 className="title">{t("title")}</h1>
+        </div>
+		
+		<div className="flex justify-center gap-2 mt-4 flex-wrap">
+          <button onClick={() => setRole("free")} className="btn">Free</button>
+          <button onClick={() => setRole("day")} className="btn">Day</button>
+          <button onClick={() => setRole("standard")} className="btn">Standard</button>
+          <button onClick={() => setRole("pro")} className="btn">Pro</button>
+          <button onClick={() => setRole("premium")} className="btn">Premium</button>
         </div>
 
         {/* 🔥 ADMIN BUTTON FIX */}
@@ -182,6 +191,5 @@ export default function Home() {
           </button>
         </div>
       </div>
-    </>
   );
 }
