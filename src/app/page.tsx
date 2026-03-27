@@ -9,7 +9,8 @@ export default function Home() {
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState<
-  "free" | "day" | "standard" | "pro" | "premium" | "admin_premium">("free");
+    "free" | "day" | "standard" | "pro" | "premium" | "admin_premium"
+  >("free");
   const [dailyWordsUsed, setDailyWordsUsed] = useState(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -34,13 +35,13 @@ export default function Home() {
   };
 
   const limits = {
-  free: 1500,
-  day: 8000,
-  standard: 10000,
-  pro: 25000,
-  premium: 50000,
-  admin_premium: Infinity,
-};
+    free: 1500,
+    day: 8000,
+    standard: 10000,
+    pro: 25000,
+    premium: 50000,
+    admin_premium: Infinity,
+  };
 
   const enterAsAdmin = () => {
     setRole("admin_premium");
@@ -73,7 +74,7 @@ export default function Home() {
 
       const data = await res.json();
       setOutput(data.output || "Brak wyniku");
-      setDailyWordsUsed(prev => prev + wordCount);
+      setDailyWordsUsed((prev) => prev + wordCount);
     } catch {
       setOutput("Błąd połączenia");
     } finally {
@@ -99,97 +100,160 @@ export default function Home() {
   const outputStats = stats(output);
 
   return (
+    <div className="app-container">
+      <div className="header">
+        <h1 className="title">{t("title")}</h1>
+      </div>
 
-      <div className="app-container">
-        <div className="header">
-          <h1 className="title">{t("title")}</h1>
+      <div className="flex justify-center gap-2 mt-4 flex-wrap">
+        <button
+          onClick={() => setRole("free")}
+          className={`btn ${role === "free" ? "opacity-100 scale-105" : "opacity-50"}`}
+        >
+          Free
+        </button>
+
+        <button
+          onClick={() => setRole("day")}
+          className={`btn ${role === "day" ? "opacity-100 scale-105" : "opacity-50"}`}
+        >
+          Day
+        </button>
+
+        <button
+          onClick={() => setRole("standard")}
+          className={`btn ${role === "standard" ? "opacity-100 scale-105" : "opacity-50"}`}
+        >
+          Standard
+        </button>
+
+        <button
+          onClick={() => setRole("pro")}
+          className={`btn ${role === "pro" ? "opacity-100 scale-105" : "opacity-50"}`}
+        >
+          Pro
+        </button>
+
+        <button
+          onClick={() => setRole("premium")}
+          className={`btn ${role === "premium" ? "opacity-100 scale-105" : "opacity-50"}`}
+        >
+          Premium
+        </button>
+      </div>
+
+      {role === "admin_premium" && (
+        <div className="flex justify-center mt-4">
+          <button
+            onClick={enterAsAdmin}
+            className="px-6 py-2 bg-yellow-600 text-white rounded"
+          >
+            Admin Panel
+          </button>
         </div>
-		
-		<div className="flex justify-center gap-2 mt-4 flex-wrap">
-          <button onClick={() => setRole("free")} className="btn">Free</button>
-          <button onClick={() => setRole("day")} className="btn">Day</button>
-          <button onClick={() => setRole("standard")} className="btn">Standard</button>
-          <button onClick={() => setRole("pro")} className="btn">Pro</button>
-          <button onClick={() => setRole("premium")} className="btn">Premium</button>
+      )}
+
+      <div className="text-center mt-2 text-yellow-400 font-bold">
+        Aktualna rola: {role.toUpperCase()}
+      </div>
+
+      <div className="editor-grid flex-1 min-h-0">
+        <div className="panel">
+          <div className="panel-header">{t("output")}</div>
+
+          <div className="textarea-wrapper">
+            <div className="textarea whitespace-pre-wrap">
+              {loading ? t("loading") : output || "Tu pojawi się wynik"}
+            </div>
+
+            {output && (
+              <button onClick={copyOutput} className="copy-btn">
+                {t("copy")}
+              </button>
+            )}
+          </div>
+
+          <div className="counter">
+            {t("chars")}: {outputStats.chars} | {t("words")}: {outputStats.words}
+          </div>
         </div>
 
-        {/* 🔥 ADMIN BUTTON FIX */}
-        {role === "admin_premium" && (
-          <div className="flex justify-center mt-4">
-            <button
-              onClick={enterAsAdmin}
-              className="px-6 py-2 bg-yellow-600 text-white rounded"
-            >
-              Admin Panel
+        <div className="panel">
+          <div className="panel-header">{t("input")}</div>
+
+          <div className="textarea-wrapper">
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              className="textarea"
+            />
+
+            <button onClick={pasteInput} className="paste-btn">
+              {t("paste")}
             </button>
           </div>
-        )}
 
-        <div className="text-center mt-2 text-yellow-400 font-bold">
-          Aktualna rola: {role.toUpperCase()}
-        </div>
-
-        <div className="editor-grid flex-1 min-h-0">
-
-          <div className="panel">
-            <div className="panel-header">{t("output")}</div>
-
-            <div className="textarea-wrapper">
-              <div className="textarea whitespace-pre-wrap">
-                {loading ? t("loading") : output || "Tu pojawi się wynik"}
-              </div>
-
-              {output && (
-                <button onClick={copyOutput} className="copy-btn">
-                  {t("copy")}
-                </button>
-              )}
-            </div>
-
-            <div className="counter">
-              {t("chars")}: {outputStats.chars} | {t("words")}: {outputStats.words}
-            </div>
+          <div className="counter">
+            {t("chars")}: {inputStats.chars} | {t("words")}: {inputStats.words}
           </div>
-
-          <div className="panel">
-            <div className="panel-header">{t("input")}</div>
-
-            <div className="textarea-wrapper">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                className="textarea"
-              />
-
-              <button onClick={pasteInput} className="paste-btn">
-                {t("paste")}
-              </button>
-            </div>
-
-            <div className="counter">
-              {t("chars")}: {inputStats.chars} | {t("words")}: {inputStats.words}
-            </div>
-          </div>
-        </div>
-
-        <div className="actions">
-          <button onClick={() => handleAction("edytuj")} className="btn btn-edytuj">
-            {t("edit")}
-          </button>
-
-          <button onClick={() => handleAction("skroc")} className="btn btn-skroc">
-            {t("shorten")}
-          </button>
-
-          <button onClick={() => handleAction("formalny")} className="btn btn-formalny">
-            {t("formal")}
-          </button>
-
-          <button onClick={() => handleAction("translate")} className="btn btn-translate">
-            {t("translate")}
-          </button>
         </div>
       </div>
-  );
+
+      <div className="actions">
+
+  <button
+    onClick={() => handleAction("edytuj")}
+    className="btn btn-edytuj"
+  >
+    Edytuj
+  </button>
+
+  <button
+    onClick={() =>
+      role === "free"
+        ? alert("Upgrade required")
+        : handleAction("skroc")
+    }
+    className={`btn btn-skroc ${
+      role === "free" ? "opacity-40 cursor-not-allowed" : ""
+    }`}
+  >
+    Skróć {role === "free" && "🔒"}
+  </button>
+
+  <button
+    onClick={() =>
+      role === "free" || role === "day"
+        ? alert("Upgrade required")
+        : handleAction("formalny")
+    }
+    className={`btn btn-formalny ${
+      role === "free" || role === "day"
+        ? "opacity-40 cursor-not-allowed"
+        : ""
+    }`}
+  >
+    Sformalizuj {(role === "free" || role === "day") && "🔒"}
+  </button>
+
+  <button
+    onClick={() =>
+      role !== "premium" && role !== "admin_premium"
+        ? alert("Upgrade required")
+        : handleAction("translate")
+    }
+    className={`btn btn-translate ${
+      role !== "premium" && role !== "admin_premium"
+        ? "opacity-40 cursor-not-allowed"
+        : ""
+    }`}
+  >
+    Przetłumacz {role !== "premium" && role !== "admin_premium" && "🔒"}
+  </button>
+
+</div>   {/* actions */}
+
+</div>   {/* app-container */}
+);
 }
