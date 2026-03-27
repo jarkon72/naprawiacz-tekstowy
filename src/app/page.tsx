@@ -252,8 +252,8 @@ export default function Home() {
     Przetłumacz {role !== "premium" && role !== "admin_premium" && "🔒"}
   </button>
 
-</div>   {/* actions */}
+</div>
 
-</div>   {/* app-container */}
+</div>
 );
 }
