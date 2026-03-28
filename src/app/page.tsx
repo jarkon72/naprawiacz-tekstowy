@@ -68,13 +68,13 @@ export default function Home() {
   };
 
   const limits = {
-    free: 1500,
-    day: 8000,
-    standard: 10000,
-    pro: 25000,
-    premium: 50000,
-    admin_premium: Infinity,
-  };
+  free: 1500,
+  day: 8000,
+  standard: 12000,
+  pro: 20000,
+  premium: 50000,
+  admin_premium: 150000, // 🔥 TO
+};
 
   useEffect(() => {
     fetch("/api/check-admin")

@@ -34,7 +34,18 @@ function getModel(mode: string, role: string) {
 
   return "qwen2.5:latest";
 }
+  
+ function getLimit(role: string) {
+  if (role === "free") return 1500;
+  if (role === "day") return 8000;
+  if (role === "standard") return 12000;
+  if (role === "pro") return 20000;
+  if (role === "premium") return 50000;
+  if (role === "admin_premium") return 150000;
 
+  return 2000;
+} 
+  
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
