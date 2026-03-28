@@ -87,14 +87,40 @@ export default function Home() {
         }
       });
   }, []);
+  
+  useEffect(() => {
+  const firstUse = localStorage.getItem("free_first_use");
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (!firstUse) {
+    localStorage.setItem("free_first_use", today);
+  }
+}, []);
+
+function isFreeBlocked() {
+  const firstUse = localStorage.getItem("free_first_use");
+  if (!firstUse) return false;
+
+  const start = new Date(firstUse);
+  const now = new Date();
+
+  const diff = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+
+  return diff >= 6;
+}
 
   async function handleAction(mode: Mode) {
+	  
+	if (role === "free" && isFreeBlocked()) {
+      alert("Free limit reached. Buy access.");
+      return;
+   }  
     if (!input.trim()) return alert(t("noText"));
 
-    const wordCount = input.trim().split(/\s+/).filter(Boolean).length;
+    const charCount = input.length;
     const limit = limits[role];
 
-    if (dailyWordsUsed + wordCount > limit && role !== "admin_premium") {
+   if (dailyWordsUsed + charCount > limit && role !== "admin_premium") {
       return alert(t("dailyLimitReached"));
     }
 
@@ -111,7 +137,7 @@ export default function Home() {
 
       const data = await res.json();
       setOutput(data.output || "Brak wyniku");
-      setDailyWordsUsed((prev) => prev + wordCount);
+      setDailyWordsUsed((prev) => prev + charCount);
     } catch {
       setOutput("Błąd połączenia");
     } finally {
@@ -170,7 +196,7 @@ export default function Home() {
       </div>
 
       <div className="text-center mt-2 text-yellow-400 font-bold">
-        Aktualna rola: {role.toUpperCase()}
+        Aktualna rola: {role.toUpperCase()} | Limit: ~{Math.round(limits[role] / 5)} {t("words")}
       </div>
 
       <div className="editor-grid flex-1 min-h-0">

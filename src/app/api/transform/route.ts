@@ -2,6 +2,39 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
+function getModel(mode: string, role: string) {
+  // 🔴 research tylko dla admina
+  if (mode === "research" && role !== "admin_premium") {
+    return "qwen2.5:latest"; // fallback, ale i tak zablokowane wcześniej
+  }
+
+  // FREE / DAY / STANDARD
+  if (role === "free" || role === "day" || role === "standard") {
+    return "qwen2.5:latest";
+  }
+
+  // PRO
+  if (role === "pro") {
+    return "qwen2.5:latest";
+  }
+
+  // PREMIUM (bez research)
+  if (role === "premium") {
+    if (mode === "edytuj" || mode === "formalny") return "trurl-13b-q6:latest";
+    return "qwen2.5:latest";
+  }
+
+  // ADMIN (jedyny z research)
+  if (role === "admin_premium") {
+    if (mode === "research") return "qwen2.5:14b";
+    if (mode === "edytuj" || mode === "formalny") return "trurl-13b-q6:latest";
+    if (mode === "translate") return "llama3.1:8b";
+    return "qwen2.5:latest";
+  }
+
+  return "qwen2.5:latest";
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -14,7 +47,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 🔥 FIX — ograniczenie dużego tekstu
-    const safeText = text.length > 20000 ? text.slice(0, 20000) : text;
+    const safeText = text.length > 50000 ? text.slice(0, 50000) : text;
 
     // 🔥 INTERNET CONTEXT (TAVILY)
     let onlineContext = "";
