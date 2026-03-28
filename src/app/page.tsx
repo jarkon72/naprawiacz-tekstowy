@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 type Mode = "edytuj" | "skroc" | "formalny" | "translate" | "research";
 
 export default function Home() {
-  const [lang] = useState<"pl" | "en">("pl");
+  const [lang, setLang] = useState<"pl" | "en">("pl");
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,6 +16,12 @@ export default function Home() {
 
   const t = (key: string) => {
     const pl = {
+      plan_free: "Darmowy",
+      plan_day: "Dzień",
+      plan_standard: "Standard",
+      plan_pro: "Pro",
+      plan_premium: "Premium",
+
       title: "Poprawiacz tekstu",
       input: "Tekst wejściowy",
       output: "Tekst wyjściowy",
@@ -32,7 +38,33 @@ export default function Home() {
       words: "słów",
       dailyLimitReached: "Limit osiągnięty",
     };
-    return pl[key as keyof typeof pl];
+
+    const en = {
+      plan_free: "Free",
+      plan_day: "Day",
+      plan_standard: "Standard",
+      plan_pro: "Pro",
+      plan_premium: "Premium",
+
+      title: "Text Editor",
+      input: "Input text",
+      output: "Output text",
+      edit: "Edit",
+      shorten: "Shorten",
+      formal: "Formalize",
+      translate: "Translate",
+      research: "Enhance",
+      loading: "Processing...",
+      noText: "Enter text!",
+      copy: "Copy",
+      paste: "Paste",
+      chars: "chars",
+      words: "words",
+      dailyLimitReached: "Limit reached",
+    };
+
+    const dict = lang === "en" ? en : pl;
+    return dict[key as keyof typeof pl];
   };
 
   const limits = {
@@ -44,33 +76,16 @@ export default function Home() {
     admin_premium: Infinity,
   };
 
-  // 🔥 NOWE — czytanie roli z localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("app_role");
-    if (saved) {
-      setRole(saved as any);
-    }
-  }, []);
-
-  // 🔥 NOWE — zapis roli
-  const setRoleAndSave = (r: any) => {
-    setRole(r);
-    localStorage.setItem("app_role", r);
-  };
-
-  // === ADMIN Z HASŁEM ===
-  const enterAsAdmin = () => {
-    const password = prompt("Podaj hasło Administratora:");
-    if (password === "twoje_haslo_tutaj") {
-      setRoleAndSave("admin_premium");
-      alert("✅ Admin Premium aktywny");
-    } else if (password) {
-      alert("❌ Nieprawidłowe hasło");
-    }
-  };
-
-  useEffect(() => {
-    inputRef.current?.focus();
+    fetch("/api/check-admin")
+      .then(res => res.json())
+      .then(data => {
+        if (data.admin) {
+          setRole("admin_premium");
+        } else {
+          setRole("free");
+        }
+      });
   }, []);
 
   async function handleAction(mode: Mode) {
@@ -88,10 +103,12 @@ export default function Home() {
 
     try {
       const res = await fetch("/api/transform", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, text: input }),
-      });
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  credentials: "include", // 🔥 TO DODAJESZ
+  body: JSON.stringify({ mode, text: input }),
+});
+
       const data = await res.json();
       setOutput(data.output || "Brak wyniku");
       setDailyWordsUsed((prev) => prev + wordCount);
@@ -103,12 +120,6 @@ export default function Home() {
   }
 
   const copyOutput = () => navigator.clipboard.writeText(output);
-  const pasteInput = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      setInput(text);
-    } catch {}
-  };
 
   const stats = (t: string) => ({
     chars: t.length,
@@ -121,16 +132,41 @@ export default function Home() {
   return (
     <div className="app-container">
       <div className="header">
-        <h1 className="title">{t("title")}</h1>
+        <h1
+          className="title"
+          onDoubleClick={() => {
+            const pass = prompt("Admin password:");
+            if (!pass) return;
+
+            fetch("/api/admin-login", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ key: pass })
+            }).then(res => {
+              if (res.ok) {
+                alert("ADMIN MODE");
+                location.reload();
+              } else {
+                alert("Wrong password");
+              }
+            });
+          }}
+        >
+          {t("title")}
+        </h1>
+
+        <div style={{ position: "absolute", top: 10, right: 20 }}>
+          <button onClick={() => { localStorage.setItem("lang", "pl"); setLang("pl"); }} style={{ fontSize: "20px", marginRight: "8px" }}>🇵🇱</button>
+          <button onClick={() => { localStorage.setItem("lang", "en"); setLang("en"); }} style={{ fontSize: "20px" }}>🇬🇧</button>
+        </div>
       </div>
 
-      {/* Pasek planów */}
       <div className="flex justify-center gap-2 mt-4 flex-wrap">
-        <button onClick={() => setRoleAndSave("free")} className={`btn ${role === "free" ? "opacity-100 scale-105" : "opacity-50"}`}>Free</button>
-        <button onClick={() => setRoleAndSave("day")} className={`btn ${role === "day" ? "opacity-100 scale-105" : "opacity-50"}`}>Day</button>
-        <button onClick={() => setRoleAndSave("standard")} className={`btn ${role === "standard" ? "opacity-100 scale-105" : "opacity-50"}`}>Standard</button>
-        <button onClick={() => setRoleAndSave("pro")} className={`btn ${role === "pro" ? "opacity-100 scale-105" : "opacity-50"}`}>Pro</button>
-        <button onClick={() => setRoleAndSave("premium")} className={`btn ${role === "premium" ? "opacity-100 scale-105" : "opacity-50"}`}>Premium</button>
+        <button onClick={() => setRole("free")} className={`btn ${role === "free" ? "opacity-100 scale-105" : "opacity-50"}`}>{t("plan_free")}</button>
+        <button onClick={() => setRole("day")} className={`btn ${role === "day" ? "opacity-100 scale-105" : "opacity-50"}`}>{t("plan_day")}</button>
+        <button onClick={() => setRole("standard")} className={`btn ${role === "standard" ? "opacity-100 scale-105" : "opacity-50"}`}>{t("plan_standard")}</button>
+        <button onClick={() => setRole("pro")} className={`btn ${role === "pro" ? "opacity-100 scale-105" : "opacity-50"}`}>{t("plan_pro")}</button>
+        <button onClick={() => setRole("premium")} className={`btn ${role === "premium" ? "opacity-100 scale-105" : "opacity-50"}`}>{t("plan_premium")}</button>
       </div>
 
       <div className="text-center mt-2 text-yellow-400 font-bold">
@@ -154,13 +190,7 @@ export default function Home() {
         <div className="panel">
           <div className="panel-header">{t("input")}</div>
           <div className="textarea-wrapper">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              className="textarea"
-            />
-            <button onClick={pasteInput} className="paste-btn">{t("paste")}</button>
+            <textarea ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} className="textarea" />
           </div>
           <div className="counter">
             {t("chars")}: {inputStats.chars} | {t("words")}: {inputStats.words}
@@ -169,35 +199,14 @@ export default function Home() {
       </div>
 
       <div className="actions">
-        <button onClick={() => handleAction("edytuj")} className="btn btn-edytuj">Edytuj</button>
-
-        <button
-          onClick={() => role === "free" ? alert("Upgrade required") : handleAction("skroc")}
-          className={`btn btn-skroc ${role === "free" ? "opacity-40 cursor-not-allowed" : ""}`}
-        >
-          Skróć {role === "free" && "🔒"}
-        </button>
-
-        <button
-          onClick={() => (role === "free" || role === "day") ? alert("Upgrade required") : handleAction("formalny")}
-          className={`btn btn-formalny ${(role === "free" || role === "day") ? "opacity-40 cursor-not-allowed" : ""}`}
-        >
-          Sformalizuj {(role === "free" || role === "day") && "🔒"}
-        </button>
-
-        <button
-          onClick={() => (role !== "premium" && role !== "admin_premium") ? alert("Upgrade required") : handleAction("translate")}
-          className={`btn btn-translate ${(role !== "premium" && role !== "admin_premium") ? "opacity-40 cursor-not-allowed" : ""}`}
-        >
-          Przetłumacz {(role !== "premium" && role !== "admin_premium") && "🔒"}
-        </button>
+        <button onClick={() => handleAction("edytuj")} className="btn btn-edytuj">{t("edit")}</button>
+        <button onClick={() => role === "free" ? alert("Upgrade required") : handleAction("skroc")} className={`btn btn-skroc ${role === "free" ? "opacity-40 cursor-not-allowed" : ""}`}>{t("shorten")} {role === "free" && "🔒"}</button>
+        <button onClick={() => (role === "free" || role === "day") ? alert("Upgrade required") : handleAction("formalny")} className={`btn btn-formalny ${(role === "free" || role === "day") ? "opacity-40 cursor-not-allowed" : ""}`}>{t("formal")} {(role === "free" || role === "day") && "🔒"}</button>
+        <button onClick={() => (role !== "premium" && role !== "admin_premium") ? alert("Upgrade required") : handleAction("translate")} className={`btn btn-translate ${(role !== "premium" && role !== "admin_premium") ? "opacity-40 cursor-not-allowed" : ""}`}>{t("translate")} {(role !== "premium" && role !== "admin_premium") && "🔒"}</button>
 
         {role === "admin_premium" && (
-          <button
-            onClick={() => handleAction("research")}
-            className="btn btn-research"
-          >
-            🔍 Uzupełnij
+          <button onClick={() => handleAction("research")} className="btn btn-research">
+            🔍 {t("research")}
           </button>
         )}
       </div>

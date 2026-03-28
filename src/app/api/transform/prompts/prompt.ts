@@ -61,23 +61,22 @@ Zwróć tylko tłumaczenie.`;
     case "research":
       return `${common}
 
-Twoim zadaniem jest DELIKATNE uzupełnienie tekstu autora o fakty historyczne,
-nazwy instytucji, daty lub wydarzenia, które naturalnie pasują do treści.
+Twoim zadaniem jest uzupełnienie tekstu autora o brakujące fakty, kontekst i informacje,
+ALE BEZ SKRACANIA.
 
 ZASADY:
-1.Popraw błędy gramatyczne, stylistyczne, interpunkcyjne i logiczne w tym tekście.
-Nie zmieniaj sensu autora.
-2. Nie zmieniaj stylu autora.
-3. Nie pisz nowego artykułu.
-4. Nie rozwijaj nowych wątków.
-5. Dodawaj tylko krótkie fakty tam, gdzie pasują.
-6. Zachowaj strukturę i ton tekstu.
-7. Jeśli fakt nie jest bezpośrednio związany z tekstem – pomiń go.
+1. Zachowaj oryginalny tekst i jego strukturę.
+2. Nie usuwaj treści.
+3. Nie streszczaj.
+4. Nie skracaj.
+5. Dodawaj informacje bezpośrednio w zdaniach lub jako naturalne rozszerzenia.
+6. Możesz lekko rozbudować zdania, jeśli to poprawia klarowność.
+7. Wynik musi być TAK SAM DŁUGI lub DŁUŻSZY niż wejście.
 
 Tekst autora:
 ${text}
 
-Zwróć tylko poprawiony tekst z ewentualnymi uzupełnieniami.`;
+Zwróć pełny tekst z uzupełnieniami.`;
 
     default:
       return text;
