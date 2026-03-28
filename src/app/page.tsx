@@ -44,11 +44,25 @@ export default function Home() {
     admin_premium: Infinity,
   };
 
-  // === ADMIN Z HASŁEM (tylko Ty znasz sposób) ===
+  // 🔥 NOWE — czytanie roli z localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("app_role");
+    if (saved) {
+      setRole(saved as any);
+    }
+  }, []);
+
+  // 🔥 NOWE — zapis roli
+  const setRoleAndSave = (r: any) => {
+    setRole(r);
+    localStorage.setItem("app_role", r);
+  };
+
+  // === ADMIN Z HASŁEM ===
   const enterAsAdmin = () => {
     const password = prompt("Podaj hasło Administratora:");
-    if (password === "twoje_haslo_tutaj") {   // ← ZMIEŃ NA SWOJE HASŁO
-      setRole("admin_premium");
+    if (password === "twoje_haslo_tutaj") {
+      setRoleAndSave("admin_premium");
       alert("✅ Admin Premium aktywny");
     } else if (password) {
       alert("❌ Nieprawidłowe hasło");
@@ -110,20 +124,19 @@ export default function Home() {
         <h1 className="title">{t("title")}</h1>
       </div>
 
-      {/* Pasek planów dla klientów */}
+      {/* Pasek planów */}
       <div className="flex justify-center gap-2 mt-4 flex-wrap">
-        <button onClick={() => setRole("free")} className={`btn ${role === "free" ? "opacity-100 scale-105" : "opacity-50"}`}>Free</button>
-        <button onClick={() => setRole("day")} className={`btn ${role === "day" ? "opacity-100 scale-105" : "opacity-50"}`}>Day</button>
-        <button onClick={() => setRole("standard")} className={`btn ${role === "standard" ? "opacity-100 scale-105" : "opacity-50"}`}>Standard</button>
-        <button onClick={() => setRole("pro")} className={`btn ${role === "pro" ? "opacity-100 scale-105" : "opacity-50"}`}>Pro</button>
-        <button onClick={() => setRole("premium")} className={`btn ${role === "premium" ? "opacity-100 scale-105" : "opacity-50"}`}>Premium</button>
+        <button onClick={() => setRoleAndSave("free")} className={`btn ${role === "free" ? "opacity-100 scale-105" : "opacity-50"}`}>Free</button>
+        <button onClick={() => setRoleAndSave("day")} className={`btn ${role === "day" ? "opacity-100 scale-105" : "opacity-50"}`}>Day</button>
+        <button onClick={() => setRoleAndSave("standard")} className={`btn ${role === "standard" ? "opacity-100 scale-105" : "opacity-50"}`}>Standard</button>
+        <button onClick={() => setRoleAndSave("pro")} className={`btn ${role === "pro" ? "opacity-100 scale-105" : "opacity-50"}`}>Pro</button>
+        <button onClick={() => setRoleAndSave("premium")} className={`btn ${role === "premium" ? "opacity-100 scale-105" : "opacity-50"}`}>Premium</button>
       </div>
 
       <div className="text-center mt-2 text-yellow-400 font-bold">
         Aktualna rola: {role.toUpperCase()}
       </div>
 
-      {/* Pola tekstowe */}
       <div className="editor-grid flex-1 min-h-0">
         <div className="panel">
           <div className="panel-header">{t("output")}</div>
@@ -155,10 +168,9 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Przyciski akcji */}
       <div className="actions">
         <button onClick={() => handleAction("edytuj")} className="btn btn-edytuj">Edytuj</button>
-        
+
         <button
           onClick={() => role === "free" ? alert("Upgrade required") : handleAction("skroc")}
           className={`btn btn-skroc ${role === "free" ? "opacity-40 cursor-not-allowed" : ""}`}
@@ -180,7 +192,6 @@ export default function Home() {
           Przetłumacz {(role !== "premium" && role !== "admin_premium") && "🔒"}
         </button>
 
-        {/* Przycisk Research tylko dla Admina */}
         {role === "admin_premium" && (
           <button
             onClick={() => handleAction("research")}
