@@ -12,6 +12,9 @@ export default function Home() {
     "free" | "day" | "standard" | "pro" | "premium" | "admin_premium"
   >("free");
   const [dailyWordsUsed, setDailyWordsUsed] = useState(0);
+
+  const [adminModel, setAdminModel] = useState("auto"); // 🔥 TO DODAJ
+
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const t = (key: string) => {
@@ -73,7 +76,7 @@ export default function Home() {
   standard: 12000,
   pro: 20000,
   premium: 50000,
-  admin_premium: 150000, // 🔥 TO
+  admin_premium: Infinity,
 };
 
   useEffect(() => {
@@ -132,7 +135,7 @@ function isFreeBlocked() {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   credentials: "include", // 🔥 TO DODAJESZ
-  body: JSON.stringify({ mode, text: input }),
+  body: JSON.stringify({ mode, text: input, modelOverride: adminModel }),
 });
 
       const data = await res.json();
@@ -154,7 +157,19 @@ function isFreeBlocked() {
 
   const inputStats = stats(input);
   const outputStats = stats(output);
+  
+  function getModelLabel(role: string) {
+  if (role === "admin_premium") return "Trurl / Qwen / Llama";
 
+  if (role === "premium") return "Trurl + Qwen + Llama"; // 🔥 3 modele
+
+  if (role === "pro") return "Qwen + Trurl"; // 🔥 2 modele
+
+  if (role === "standard") return "Qwen";
+  if (role === "day") return "Qwen";
+  return "Qwen";
+}
+  
   return (
     <div className="app-container">
       <div className="header">
@@ -194,10 +209,49 @@ function isFreeBlocked() {
         <button onClick={() => setRole("pro")} className={`btn ${role === "pro" ? "opacity-100 scale-105" : "opacity-50"}`}>{t("plan_pro")}</button>
         <button onClick={() => setRole("premium")} className={`btn ${role === "premium" ? "opacity-100 scale-105" : "opacity-50"}`}>{t("plan_premium")}</button>
       </div>
+<div className="text-center mt-2 text-yellow-400 font-bold">
+  {role === "admin_premium" && (
+    <div style={{ marginTop: 6 }}>
+      <select
+        value={adminModel}
+        onChange={(e) => setAdminModel(e.target.value)}
+        style={{ padding: "4px 8px", borderRadius: "6px" }}
+      >
+        <option value="auto">Auto</option>
+        <option value="trurl">Trurl</option>
+        <option value="qwen">Qwen</option>
+        <option value="qwen14">Qwen 14B</option>
+        <option value="bielik">Bielik</option>
+        <option value="openhermes">OpenHermes</option>
+        <option value="mistral">Mistral</option>
+        <option value="llama">Llama</option>
+      </select>
+    </div>
+  )}
 
-      <div className="text-center mt-2 text-yellow-400 font-bold">
-        Aktualna rola: {role.toUpperCase()} | Limit: ~{Math.round(limits[role] / 5)} {t("words")}
-      </div>
+  Aktualna rola: {role.toUpperCase()} | Model: {adminModel === "auto"
+    ? "Trurl (EDIT) / Qwen (GEN) / Llama (CREATIVE)"
+    : adminModel === "trurl"
+      ? "Trurl (EDIT)"
+      : adminModel === "qwen"
+        ? "Qwen (GEN)"
+        : adminModel === "qwen14"
+          ? "Qwen 14B (GEN+)"
+          : adminModel === "bielik"
+            ? "Bielik (PL)"
+            : adminModel === "openhermes"
+              ? "OpenHermes (CHAT)"
+              : adminModel === "mistral"
+                ? "Mistral (FAST)"
+                : adminModel === "llama"
+                  ? "Llama (CREATIVE)"
+                  : adminModel}
+  | Limit: {role === "admin_premium"
+    ? "∞"
+    : limits[role]
+      ? `~${Math.round(limits[role] / 5)} ${t("words")}`
+      : "0"}
+</div>
 
       <div className="editor-grid flex-1 min-h-0">
         <div className="panel">

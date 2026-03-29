@@ -41,15 +41,14 @@ function getModel(mode: string, role: string) {
   if (role === "standard") return 12000;
   if (role === "pro") return 20000;
   if (role === "premium") return 50000;
-  if (role === "admin_premium") return 150000;
-
+  if (role === "admin_premium") return Infinity;
   return 2000;
 } 
   
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { mode, text } = body;
+    const { mode, text, modelOverride } = body;
 
     const isAdmin = req.cookies.get("admin")?.value === "1";
 
@@ -58,7 +57,11 @@ export async function POST(req: NextRequest) {
     }
 
     // 🔥 FIX — ograniczenie dużego tekstu
-    const safeText = text.length > 50000 ? text.slice(0, 50000) : text;
+    const safeText = isAdmin
+  ? text
+  : text.length > 50000
+    ? text.slice(0, 50000)
+    : text;
 
     // 🔥 INTERNET CONTEXT (TAVILY)
     let onlineContext = "";
@@ -144,6 +147,19 @@ Zwróć pełny poprawiony tekst.
     } else {
       return NextResponse.json({ error: "Nieznany tryb" }, { status: 400 });
     }
+	
+	let model = getModel(mode, isAdmin ? "admin_premium" : "free");
+
+// 🔥 ADMIN override (TYLKO TO DODAJEMY)
+if (isAdmin && modelOverride && modelOverride !== "auto") {
+  if (modelOverride === "trurl") model = "trurl-13b-q6:latest";
+  if (modelOverride === "qwen") model = "qwen2.5:latest";
+  if (modelOverride === "qwen14") model = "qwen2.5:14b";
+  if (modelOverride === "bielik") model = "bielik-pl-q8:latest";
+  if (modelOverride === "openhermes") model = "openhermes-7b-q6:latest";
+  if (modelOverride === "mistral") model = "mistral:latest";
+  if (modelOverride === "llama") model = "llama3.1:8b";
+}
 
     let responseText = "";
 
