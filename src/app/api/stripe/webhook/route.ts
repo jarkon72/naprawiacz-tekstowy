@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
@@ -8,7 +9,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: Request) {
   const body = await req.text();
-  const sig = headers().get("stripe-signature");
+  const sig = (await headers()).get("stripe-signature");
 
   if (!sig) {
     return new Response("No signature", { status: 400 });
@@ -36,14 +37,18 @@ export async function POST(req: Request) {
 
   console.log("PAYMENT SUCCESS:", userId, plan);
 
-  // 🔥 TEST SAVE
-  (globalThis as any).USER_PLAN = {
-    userId,
-    plan,
-    createdAt: Date.now(),
-  };
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      plan: plan,
+      planExpiresAt:
+        plan === "daypass"
+          ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+          : null,
+    },
+  });
 
-  console.log("PLAN SAVED:", (globalThis as any).USER_PLAN);
+  console.log("PLAN SAVED TO DB");
 }
   return NextResponse.json({ received: true });
 }
