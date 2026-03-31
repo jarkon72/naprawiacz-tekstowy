@@ -1,9 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = "nodejs"; // 🔥 ważne dla process.env
+export const runtime = "nodejs";
+
+// 🔥 licznik prób
+let attempts = 0;
 
 export async function POST(req: NextRequest) {
   try {
+    // 🔥 zwiększamy licznik
+    attempts++;
+
+    // 🔥 blokada po 5 próbach
+    if (attempts > 5) {
+      return NextResponse.json(
+        { ok: false, error: "Too many attempts" },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const key = body?.key;
 
@@ -19,6 +33,9 @@ export async function POST(req: NextRequest) {
     if (key !== ADMIN_KEY) {
       return NextResponse.json({ ok: false }, { status: 401 });
     }
+
+    // 🔥 reset po poprawnym haśle
+    attempts = 0;
 
     const res = NextResponse.json({ ok: true });
 
