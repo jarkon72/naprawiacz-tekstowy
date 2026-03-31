@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { signAdmin } from "@/lib/adminAuth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,13 +13,16 @@ export async function POST(req: NextRequest) {
     console.log("Długość env:", process.env.ADMIN_PASSWORD?.length ?? "brak");
 
     if (password === process.env.ADMIN_PASSWORD) {
-      return NextResponse.json({ success: true, role: "admin_premium" });
-    }
+  const res = NextResponse.json({ success: true, role: "admin_premium" });
 
-    if (password === "alamaKOTAaKOTmaALE") {
-      console.log("Hardkod zadziałał – sprawdź .env.local !");
-      return NextResponse.json({ success: true, role: "admin_premium" });
-    }
+  res.cookies.set("admin", signAdmin("1"), {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+  });
+
+  return res;
+}
 
     return NextResponse.json(
       { success: false, error: "Błędne hasło" },

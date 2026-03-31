@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { verifyAdmin } from "@/lib/adminAuth";
 
 export const runtime = "nodejs";
 
@@ -32,13 +33,12 @@ function getModel(mode: string, role: string) {
 export async function POST(req: NextRequest) {
   try {
     // ==================== RATE LIMITING ====================
-    // Poprawiona linijka – req.ip nie istnieje w Node.js runtime
     const ip = 
       req.headers.get("x-forwarded-for")?.split(",")[0] ??
       req.headers.get("x-real-ip") ??
       "anonymous";
 
-    const { success, limit, remaining } = await ratelimit.limit(ip);
+    const { success } = await ratelimit.limit(ip);
 
     if (!success) {
       return NextResponse.json(
@@ -47,10 +47,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Reszta Twojego kodu bez żadnych zmian
+    // ==================== BODY ====================
     const body = await req.json();
     const { mode, text, modelOverride } = body;
-    const isAdmin = req.cookies.get("admin")?.value === "1";
+    const isAdmin = verifyAdmin(req.cookies.get("admin")?.value);
 
     if (!text?.trim()) {
       return NextResponse.json({ error: "Brak tekstu" }, { status: 400 });
@@ -58,8 +58,15 @@ export async function POST(req: NextRequest) {
 
     const safeText = isAdmin ? text : text.length > 50000 ? text.slice(0, 50000) : text;
 
+    // 🔴 BLOKADA NAJPIERW (zanim jakiekolwiek API)
+    if (mode === "research" && !isAdmin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
     let onlineContext = "";
-    if (mode === "research") {
+
+    // 🔒 TYLKO ADMIN MOŻE UŻYĆ TAVILY
+    if (mode === "research" && isAdmin) {
       try {
         const queryPrompt = `Stwórz krótkie zapytanie do wyszukiwarki na podstawie tekstu:\n${safeText.slice(0, 2000)}`;
         const qRes = await fetch("http://127.0.0.1:11434/api/generate", {
@@ -91,7 +98,6 @@ export async function POST(req: NextRequest) {
 
     let prompt = "";
     if (mode === "research") {
-      if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
       prompt = `Masz tekst autora oraz dodatkowe informacje z internetu...\n${onlineContext}\n=== TEKST AUTORA ===\n${safeText}\nZwróć pełny poprawiony tekst.`;
     } else if (mode === "edytuj") prompt = `Popraw błędy:\n\n${safeText}`;
     else if (mode === "skroc") prompt = `Skróć tekst:\n\n${safeText}`;
