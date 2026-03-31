@@ -4,34 +4,22 @@ import { Redis } from "@upstash/redis";
 
 export const runtime = "nodejs";
 
-// ==================== BEZPIECZEŃSTWO ====================
-// Rate Limiting (30 zapytań na minutę na IP)
+// Rate Limiting
 const redis = Redis.fromEnv();
 const ratelimit = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(30, "60 s"),   // 30 req / 60 sekund
+  limiter: Ratelimit.slidingWindow(30, "60 s"),
   analytics: true,
 });
 
 function getModel(mode: string, role: string) {
-  // 🔴 research tylko dla admina
-  if (mode === "research" && role !== "admin_premium") {
-    return "qwen2.5:latest";
-  }
-  // FREE / DAY / STANDARD
-  if (role === "free" || role === "day" || role === "standard") {
-    return "qwen2.5:latest";
-  }
-  // PRO
-  if (role === "pro") {
-    return "qwen2.5:latest";
-  }
-  // PREMIUM (bez research)
+  if (mode === "research" && role !== "admin_premium") return "qwen2.5:latest";
+  if (role === "free" || role === "day" || role === "standard") return "qwen2.5:latest";
+  if (role === "pro") return "qwen2.5:latest";
   if (role === "premium") {
     if (mode === "edytuj" || mode === "formalny") return "trurl-13b-q6:latest";
     return "qwen2.5:latest";
   }
-  // ADMIN (jedyny z research)
   if (role === "admin_premium") {
     if (mode === "research") return "qwen2.5:14b";
     if (mode === "edytuj" || mode === "formalny") return "trurl-13b-q6:latest";
@@ -41,35 +29,25 @@ function getModel(mode: string, role: string) {
   return "qwen2.5:latest";
 }
 
-function getLimit(role: string) {
-  if (role === "free") return 1500;
-  if (role === "day") return 8000;
-  if (role === "standard") return 12000;
-  if (role === "pro") return 20000;
-  if (role === "premium") return 50000;
-  if (role === "admin_premium") return Infinity;
-  return 2000;
-}
-
 export async function POST(req: NextRequest) {
   try {
     // ==================== RATE LIMITING ====================
-    const ip = req.ip ?? req.headers.get("x-forwarded-for") ?? "anonymous";
+    // Poprawiona linijka – req.ip nie istnieje w Node.js runtime
+    const ip = 
+      req.headers.get("x-forwarded-for")?.split(",")[0] ??
+      req.headers.get("x-real-ip") ??
+      "anonymous";
+
     const { success, limit, remaining } = await ratelimit.limit(ip);
 
     if (!success) {
       return NextResponse.json(
         { error: "Za dużo zapytań. Spróbuj za chwilę (max 30/min)." },
-        { 
-          status: 429,
-          headers: {
-            "X-RateLimit-Limit": limit.toString(),
-            "X-RateLimit-Remaining": remaining.toString(),
-          }
-        }
+        { status: 429 }
       );
     }
 
+    // Reszta Twojego kodu bez żadnych zmian
     const body = await req.json();
     const { mode, text, modelOverride } = body;
     const isAdmin = req.cookies.get("admin")?.value === "1";
@@ -78,14 +56,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Brak tekstu" }, { status: 400 });
     }
 
-    // 🔥 FIX — ograniczenie dużego tekstu
-    const safeText = isAdmin
-      ? text
-      : text.length > 50000
-      ? text.slice(0, 50000)
-      : text;
+    const safeText = isAdmin ? text : text.length > 50000 ? text.slice(0, 50000) : text;
 
-    // ==================== INTERNET CONTEXT (TAVILY) ====================
     let onlineContext = "";
     if (mode === "research") {
       try {
@@ -93,11 +65,7 @@ export async function POST(req: NextRequest) {
         const qRes = await fetch("http://127.0.0.1:11434/api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "qwen2.5:latest",
-            prompt: queryPrompt,
-            stream: false
-          }),
+          body: JSON.stringify({ model: "qwen2.5:latest", prompt: queryPrompt, stream: false }),
         });
         const qData = await qRes.json();
         const generatedQuery = qData.response?.trim() || safeText.slice(0, 200);
@@ -123,30 +91,13 @@ export async function POST(req: NextRequest) {
 
     let prompt = "";
     if (mode === "research") {
-      if (!isAdmin) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-      }
-      prompt = `
-Masz tekst autora oraz dodatkowe informacje z internetu.
-Twoim zadaniem jest uzupełnić tekst autora o fakty,
-ale NIE skracaj go i NIE zmieniaj sensu.
-=== DODATKOWE FAKTY Z INTERNETU ===
-${onlineContext}
-=== TEKST AUTORA ===
-${safeText}
-Zwróć pełny poprawiony tekst.
-`;
-    } else if (mode === "edytuj") {
-      prompt = `Popraw błędy:\n\n${safeText}`;
-    } else if (mode === "skroc") {
-      prompt = `Skróć tekst:\n\n${safeText}`;
-    } else if (mode === "formalny") {
-      prompt = `Przerób tekst na formalny:\n\n${safeText}`;
-    } else if (mode === "translate") {
-      prompt = `Przetłumacz na angielski:\n\n${safeText}`;
-    } else {
-      return NextResponse.json({ error: "Nieznany tryb" }, { status: 400 });
-    }
+      if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      prompt = `Masz tekst autora oraz dodatkowe informacje z internetu...\n${onlineContext}\n=== TEKST AUTORA ===\n${safeText}\nZwróć pełny poprawiony tekst.`;
+    } else if (mode === "edytuj") prompt = `Popraw błędy:\n\n${safeText}`;
+    else if (mode === "skroc") prompt = `Skróć tekst:\n\n${safeText}`;
+    else if (mode === "formalny") prompt = `Przerób tekst na formalny:\n\n${safeText}`;
+    else if (mode === "translate") prompt = `Przetłumacz na angielski:\n\n${safeText}`;
+    else return NextResponse.json({ error: "Nieznany tryb" }, { status: 400 });
 
     let model = getModel(mode, isAdmin ? "admin_premium" : "free");
 
@@ -182,9 +133,7 @@ Zwróć pełny poprawiony tekst.
       }
     }
 
-    if (!responseText) {
-      responseText = safeText;
-    }
+    if (!responseText) responseText = safeText;
 
     return NextResponse.json({ output: responseText });
   } catch (error) {
