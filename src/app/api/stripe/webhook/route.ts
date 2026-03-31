@@ -29,15 +29,21 @@ export async function POST(req: Request) {
 
   // 🔥 TU SIĘ DZIEJE MAGIA
   if (event.type === "checkout.session.completed") {
-    const session = event.data.object as Stripe.Checkout.Session;
+  const session = event.data.object as Stripe.Checkout.Session;
 
-    const userId = session.metadata?.userId;
-    const plan = session.metadata?.plan;
+  const userId = session.metadata?.userId;
+  const plan = session.metadata?.plan;
 
-    console.log("PAYMENT SUCCESS:", userId, plan);
+  console.log("PAYMENT SUCCESS:", userId, plan);
 
-    // 👉 TU DODASZ zapis do DB (zaraz)
-  }
+  // 🔥 TEST SAVE
+  (globalThis as any).USER_PLAN = {
+    userId,
+    plan,
+    createdAt: Date.now(),
+  };
 
+  console.log("PLAN SAVED:", (globalThis as any).USER_PLAN);
+}
   return NextResponse.json({ received: true });
 }
