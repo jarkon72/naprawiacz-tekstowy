@@ -1,29 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 export const runtime = "nodejs";
+
+// ==================== BEZPIECZEŃSTWO ====================
+// Rate Limiting (30 zapytań na minutę na IP)
+const redis = Redis.fromEnv();
+const ratelimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(30, "60 s"),   // 30 req / 60 sekund
+  analytics: true,
+});
 
 function getModel(mode: string, role: string) {
   // 🔴 research tylko dla admina
   if (mode === "research" && role !== "admin_premium") {
-    return "qwen2.5:latest"; // fallback, ale i tak zablokowane wcześniej
+    return "qwen2.5:latest";
   }
-
   // FREE / DAY / STANDARD
   if (role === "free" || role === "day" || role === "standard") {
     return "qwen2.5:latest";
   }
-
   // PRO
   if (role === "pro") {
     return "qwen2.5:latest";
   }
-
   // PREMIUM (bez research)
   if (role === "premium") {
     if (mode === "edytuj" || mode === "formalny") return "trurl-13b-q6:latest";
     return "qwen2.5:latest";
   }
-
   // ADMIN (jedyny z research)
   if (role === "admin_premium") {
     if (mode === "research") return "qwen2.5:14b";
@@ -31,11 +38,10 @@ function getModel(mode: string, role: string) {
     if (mode === "translate") return "llama3.1:8b";
     return "qwen2.5:latest";
   }
-
   return "qwen2.5:latest";
 }
-  
- function getLimit(role: string) {
+
+function getLimit(role: string) {
   if (role === "free") return 1500;
   if (role === "day") return 8000;
   if (role === "standard") return 12000;
@@ -43,13 +49,29 @@ function getModel(mode: string, role: string) {
   if (role === "premium") return 50000;
   if (role === "admin_premium") return Infinity;
   return 2000;
-} 
-  
+}
+
 export async function POST(req: NextRequest) {
   try {
+    // ==================== RATE LIMITING ====================
+    const ip = req.ip ?? req.headers.get("x-forwarded-for") ?? "anonymous";
+    const { success, limit, remaining } = await ratelimit.limit(ip);
+
+    if (!success) {
+      return NextResponse.json(
+        { error: "Za dużo zapytań. Spróbuj za chwilę (max 30/min)." },
+        { 
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": limit.toString(),
+            "X-RateLimit-Remaining": remaining.toString(),
+          }
+        }
+      );
+    }
+
     const body = await req.json();
     const { mode, text, modelOverride } = body;
-
     const isAdmin = req.cookies.get("admin")?.value === "1";
 
     if (!text?.trim()) {
@@ -58,19 +80,16 @@ export async function POST(req: NextRequest) {
 
     // 🔥 FIX — ograniczenie dużego tekstu
     const safeText = isAdmin
-  ? text
-  : text.length > 50000
-    ? text.slice(0, 50000)
-    : text;
+      ? text
+      : text.length > 50000
+      ? text.slice(0, 50000)
+      : text;
 
-    // 🔥 INTERNET CONTEXT (TAVILY)
+    // ==================== INTERNET CONTEXT (TAVILY) ====================
     let onlineContext = "";
-
     if (mode === "research") {
       try {
-        // 🔥 AUTO QUERY (LLM robi zapytanie)
         const queryPrompt = `Stwórz krótkie zapytanie do wyszukiwarki na podstawie tekstu:\n${safeText.slice(0, 2000)}`;
-
         const qRes = await fetch("http://127.0.0.1:11434/api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -80,16 +99,12 @@ export async function POST(req: NextRequest) {
             stream: false
           }),
         });
-
         const qData = await qRes.json();
         const generatedQuery = qData.response?.trim() || safeText.slice(0, 200);
 
-        // 🔥 TAVILY SEARCH
         const tavilyRes = await fetch("https://api.tavily.com/search", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             api_key: process.env.TAVILY_API_KEY,
             query: generatedQuery,
@@ -97,72 +112,55 @@ export async function POST(req: NextRequest) {
             include_answer: true,
           }),
         });
-
         if (tavilyRes.ok) {
           const tavilyData = await tavilyRes.json();
-          onlineContext =
-            tavilyData.answer ||
-            JSON.stringify(tavilyData.results?.slice(0, 3) || []);
+          onlineContext = tavilyData.answer || JSON.stringify(tavilyData.results?.slice(0, 3) || []);
         }
-
       } catch (e) {
         console.log("Tavily error");
       }
     }
 
     let prompt = "";
-
     if (mode === "research") {
       if (!isAdmin) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
       }
-
       prompt = `
 Masz tekst autora oraz dodatkowe informacje z internetu.
-
 Twoim zadaniem jest uzupełnić tekst autora o fakty,
 ale NIE skracaj go i NIE zmieniaj sensu.
-
 === DODATKOWE FAKTY Z INTERNETU ===
 ${onlineContext}
-
 === TEKST AUTORA ===
 ${safeText}
-
 Zwróć pełny poprawiony tekst.
 `;
-
     } else if (mode === "edytuj") {
       prompt = `Popraw błędy:\n\n${safeText}`;
-
     } else if (mode === "skroc") {
       prompt = `Skróć tekst:\n\n${safeText}`;
-
     } else if (mode === "formalny") {
       prompt = `Przerób tekst na formalny:\n\n${safeText}`;
-
     } else if (mode === "translate") {
       prompt = `Przetłumacz na angielski:\n\n${safeText}`;
-
     } else {
       return NextResponse.json({ error: "Nieznany tryb" }, { status: 400 });
     }
-	
-	let model = getModel(mode, isAdmin ? "admin_premium" : "free");
 
-// 🔥 ADMIN override (TYLKO TO DODAJEMY)
-if (isAdmin && modelOverride && modelOverride !== "auto") {
-  if (modelOverride === "trurl") model = "trurl-13b-q6:latest";
-  if (modelOverride === "qwen") model = "qwen2.5:latest";
-  if (modelOverride === "qwen14") model = "qwen2.5:14b";
-  if (modelOverride === "bielik") model = "bielik-pl-q8:latest";
-  if (modelOverride === "openhermes") model = "openhermes-7b-q6:latest";
-  if (modelOverride === "mistral") model = "mistral:latest";
-  if (modelOverride === "llama") model = "llama3.1:8b";
-}
+    let model = getModel(mode, isAdmin ? "admin_premium" : "free");
+
+    if (isAdmin && modelOverride && modelOverride !== "auto") {
+      if (modelOverride === "trurl") model = "trurl-13b-q6:latest";
+      if (modelOverride === "qwen") model = "qwen2.5:latest";
+      if (modelOverride === "qwen14") model = "qwen2.5:14b";
+      if (modelOverride === "bielik") model = "bielik-pl-q8:latest";
+      if (modelOverride === "openhermes") model = "openhermes-7b-q6:latest";
+      if (modelOverride === "mistral") model = "mistral:latest";
+      if (modelOverride === "llama") model = "llama3.1:8b";
+    }
 
     let responseText = "";
-
     if (isAdmin && mode === "research") {
       try {
         const ollamaRes = await fetch("http://127.0.0.1:11434/api/generate", {
@@ -175,12 +173,10 @@ if (isAdmin && modelOverride && modelOverride !== "auto") {
             options: { temperature: 0.3, num_ctx: 32768 },
           }),
         });
-
         if (ollamaRes.ok) {
           const data = await ollamaRes.json();
           responseText = data.response?.trim() || "";
         }
-
       } catch (e) {
         console.log("Ollama offline");
       }
@@ -191,7 +187,6 @@ if (isAdmin && modelOverride && modelOverride !== "auto") {
     }
 
     return NextResponse.json({ output: responseText });
-
   } catch (error) {
     console.error("TRANSFORM ERROR:", error);
     return NextResponse.json({ error: "Błąd serwera" }, { status: 500 });
