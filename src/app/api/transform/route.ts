@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 const redis = Redis.fromEnv();
 const ratelimit = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(30, "60 s"),   // 30 zapyta¨½ na minut? na IP
+  limiter: Ratelimit.slidingWindow(30, "60 s"),   // 30 zapyta   na minut? na IP
   analytics: true,
 });
 
