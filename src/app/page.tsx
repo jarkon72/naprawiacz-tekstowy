@@ -2,107 +2,66 @@
 import { useEffect, useState, useRef } from "react";
 
 type Mode = "edytuj" | "skroc" | "formalny" | "translate" | "research";
+type Lang = "pl" | "en";
+type Role = "free" | "day" | "standard" | "pro" | "premium" | "admin_premium";
 
 export default function Home() {
-  const [lang, setLang] = useState<"pl" | "en">("pl");
-  const [input, setInput] = useState("");
-  const [output, setOutput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [role, setRole] = useState<
-    "free" | "day" | "standard" | "pro" | "premium" | "admin_premium"
-  >("free");
-  const [dailyWordsUsed, setDailyWordsUsed] = useState(0);
-  const [adminModel, setAdminModel] = useState("auto");
-
+  const [lang, setLang] = useState<Lang>("pl");
+  const [input, setInput] = useState<string>("");
+  const [output, setOutput] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [role, setRole] = useState<Role>("free");
+  const [dailyWordsUsed, setDailyWordsUsed] = useState<number>(0);
+  const [adminModel, setAdminModel] = useState<string>("auto");
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const t = (key: string) => {
     const pl = {
-      plan_free: "Darmowy",
-      plan_day: "Dzień",
-      plan_standard: "Standard",
-      plan_pro: "Pro",
-      plan_premium: "Premium",
-      title: "Poprawiacz tekstu",
-      input: "Tekst wejściowy",
-      output: "Tekst wyjściowy",
-      edit: "Edytuj",
-      shorten: "Skróć",
-      formal: "Sformalizuj",
-      translate: "Przetłumacz",
-      research: "Uzupełnij",
-      loading: "Przetwarzam...",
-      noText: "Wpisz tekst!",
-      copy: "Kopiuj",
-      paste: "Wklej",
-      chars: "znaków",
-      words: "słów",
+      plan_free: "Darmowy", plan_day: "Dzień", plan_standard: "Standard",
+      plan_pro: "Pro", plan_premium: "Premium", title: "Poprawiacz tekstu",
+      input: "Tekst wejściowy", output: "Tekst wyjściowy", edit: "Edytuj",
+      shorten: "Skróć", formal: "Sformalizuj", translate: "Przetłumacz",
+      research: "Uzupełnij", loading: "Przetwarzam...", noText: "Wpisz tekst!",
+      copy: "Kopiuj", paste: "Wklej", chars: "znaków", words: "słów",
       dailyLimitReached: "Limit osiągnięty",
     };
-
     const en = {
-      plan_free: "Free",
-      plan_day: "Day",
-      plan_standard: "Standard",
-      plan_pro: "Pro",
-      plan_premium: "Premium",
-      title: "Text Editor",
-      input: "Input text",
-      output: "Output text",
-      edit: "Edit",
-      shorten: "Shorten",
-      formal: "Formalize",
-      translate: "Translate",
-      research: "Enhance",
-      loading: "Processing...",
-      noText: "Enter text!",
-      copy: "Copy",
-      paste: "Paste",
-      chars: "chars",
-      words: "words",
+      plan_free: "Free", plan_day: "Day", plan_standard: "Standard",
+      plan_pro: "Pro", plan_premium: "Premium", title: "Text Editor",
+      input: "Input text", output: "Output text", edit: "Edit",
+      shorten: "Shorten", formal: "Formalize", translate: "Translate",
+      research: "Enhance", loading: "Processing...", noText: "Enter text!",
+      copy: "Copy", paste: "Paste", chars: "chars", words: "words",
       dailyLimitReached: "Limit reached",
     };
-
     const dict = lang === "en" ? en : pl;
     return dict[key as keyof typeof pl];
   };
 
-  const limits = {
-    free: 1500,
-    day: 8000,
-    standard: 12000,
-    pro: 20000,
-    premium: 50000,
-    admin_premium: Infinity,
+  const limits: Record<Role, number> = {
+    free: 1500, day: 8000, standard: 12000,
+    pro: 20000, premium: 50000, admin_premium: Infinity,
   };
 
   useEffect(() => {
     fetch("/api/check-admin")
       .then((res) => res.json())
       .then((data) => {
-        if (data.admin) {
-          setRole("admin_premium");
-        } else {
-          setRole("free");
-        }
+        setRole(data.admin ? "admin_premium" : "free");
       });
   }, []);
 
   useEffect(() => {
     const firstUse = localStorage.getItem("free_first_use");
     const today = new Date().toISOString().slice(0, 10);
-    if (!firstUse) {
-      localStorage.setItem("free_first_use", today);
-    }
+    if (!firstUse) localStorage.setItem("free_first_use", today);
   }, []);
 
-  function isFreeBlocked() {
+  function isFreeBlocked(): boolean {
     const firstUse = localStorage.getItem("free_first_use");
     if (!firstUse) return false;
-    const start = new Date(firstUse);
-    const now = new Date();
     const diff = Math.floor(
-      (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+      (new Date().getTime() - new Date(firstUse).getTime()) / (1000 * 60 * 60 * 24)
     );
     return diff >= 6;
   }
@@ -112,18 +71,15 @@ export default function Home() {
       alert("Free limit reached. Buy access.");
       return;
     }
-    if (!input.trim()) return alert(t("noText"));
-
+    if (!input.trim()) { alert(t("noText")); return; }
     const charCount = input.length;
     const limit = limits[role];
-
     if (dailyWordsUsed + charCount > limit && role !== "admin_premium") {
-      return alert(t("dailyLimitReached"));
+      alert(t("dailyLimitReached"));
+      return;
     }
-
     setLoading(true);
     setOutput(t("loading"));
-
     try {
       const res = await fetch("/api/transform", {
         method: "POST",
@@ -131,7 +87,6 @@ export default function Home() {
         credentials: "include",
         body: JSON.stringify({ mode, text: input }),
       });
-
       const data = await res.json();
       setOutput(data.output || "Brak wyniku");
       setDailyWordsUsed((prev) => prev + charCount);
@@ -144,9 +99,9 @@ export default function Home() {
 
   const copyOutput = () => navigator.clipboard.writeText(output);
 
-  const stats = (t: string) => ({
-    chars: t.length,
-    words: t.trim().split(/\s+/).filter(Boolean).length,
+  const stats = (text: string) => ({
+    chars: text.length,
+    words: text.trim().split(/\s+/).filter(Boolean).length,
   });
 
   const inputStats = stats(input);
@@ -154,8 +109,9 @@ export default function Home() {
 
   return (
     <div className="app-container">
+
       {/* HEADER */}
-      <div className="header" style={{ padding: "0.5rem 1rem 0" }}>
+      <div className="header" style={{ padding: "0.5rem 1rem 0 1rem", flexShrink: 0 }}>
         <h1
           className="title"
           onDoubleClick={() => {
@@ -166,53 +122,48 @@ export default function Home() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ key: pass }),
             }).then((res) => {
-              if (res.ok) {
-                alert("ADMIN MODE");
-                location.reload();
-              } else {
-                alert("Wrong password");
-              }
+              if (res.ok) { alert("ADMIN MODE"); location.reload(); }
+              else alert("Wrong password");
             });
           }}
         >
           {t("title")}
         </h1>
-
         <div style={{ position: "absolute", top: 10, right: 20 }}>
           <button
-            onClick={() => {
-              localStorage.setItem("lang", "pl");
-              setLang("pl");
-            }}
+            onClick={() => { localStorage.setItem("lang", "pl"); setLang("pl"); }}
             style={{ fontSize: "20px", marginRight: "8px" }}
-          >
-            🇵🇱
-          </button>
+          >🇵🇱</button>
           <button
-            onClick={() => {
-              localStorage.setItem("lang", "en");
-              setLang("en");
-            }}
+            onClick={() => { localStorage.setItem("lang", "en"); setLang("en"); }}
             style={{ fontSize: "20px" }}
-          >
-            🇬🇧
-          </button>
+          >🇬🇧</button>
         </div>
       </div>
 
       {/* PLAN BUTTONS */}
-      <div className="flex justify-center gap-2 mt-2 flex-wrap" style={{ flexShrink: 0 }}>
-        <button onClick={() => setRole("free")} className={`btn ${role === "free" ? "opacity-100 scale-105" : "opacity-50"}`}>{t("plan_free")}</button>
-        <button onClick={() => setRole("day")} className={`btn ${role === "day" ? "opacity-100 scale-105" : "opacity-50"}`}>{t("plan_day")}</button>
-        <button onClick={() => setRole("standard")} className={`btn ${role === "standard" ? "opacity-100 scale-105" : "opacity-50"}`}>{t("plan_standard")}</button>
-        <button onClick={() => setRole("pro")} className={`btn ${role === "pro" ? "opacity-100 scale-105" : "opacity-50"}`}>{t("plan_pro")}</button>
-        <button onClick={() => setRole("premium")} className={`btn ${role === "premium" ? "opacity-100 scale-105" : "opacity-50"}`}>{t("plan_premium")}</button>
+      <div
+        className="flex justify-center gap-2 mt-2 flex-wrap"
+        style={{ flexShrink: 0, padding: "0 1rem" }}
+      >
+        {(["free", "day", "standard", "pro", "premium"] as const).map((r) => (
+          <button
+            key={r}
+            onClick={() => setRole(r)}
+            className={`btn ${role === r ? "opacity-100" : "opacity-50"}`}
+          >
+            {t(`plan_${r}`)}
+          </button>
+        ))}
       </div>
 
       {/* STATUS BAR */}
-      <div className="text-center mt-1 text-yellow-400 font-bold" style={{ flexShrink: 0 }}>
+      <div
+        className="text-center text-yellow-400 font-bold"
+        style={{ flexShrink: 0, marginTop: "0.25rem" }}
+      >
         {role === "admin_premium" && (
-          <div style={{ marginTop: 4 }}>
+          <div style={{ marginBottom: 4 }}>
             <select
               value={adminModel}
               onChange={(e) => setAdminModel(e.target.value)}
@@ -230,61 +181,40 @@ export default function Home() {
           </div>
         )}
         Aktualna rola: {role.toUpperCase()} | Model:{" "}
-        {adminModel === "auto"
-          ? "Trurl (EDIT) / Qwen (GEN) / Llama (CREATIVE)"
-          : adminModel === "trurl"
-          ? "Trurl (EDIT)"
-          : adminModel === "qwen"
-          ? "Qwen (GEN)"
-          : adminModel === "qwen14"
-          ? "Qwen 14B (GEN+)"
-          : adminModel === "bielik"
-          ? "Bielik (PL)"
-          : adminModel === "openhermes"
-          ? "OpenHermes (CHAT)"
-          : adminModel === "mistral"
-          ? "Mistral (FAST)"
-          : adminModel === "llama"
-          ? "Llama (CREATIVE)"
+        {adminModel === "auto" ? "Trurl (EDIT) / Qwen (GEN) / Llama (CREATIVE)"
+          : adminModel === "trurl" ? "Trurl (EDIT)"
+          : adminModel === "qwen" ? "Qwen (GEN)"
+          : adminModel === "qwen14" ? "Qwen 14B (GEN+)"
+          : adminModel === "bielik" ? "Bielik (PL)"
+          : adminModel === "openhermes" ? "OpenHermes (CHAT)"
+          : adminModel === "mistral" ? "Mistral (FAST)"
+          : adminModel === "llama" ? "Llama (CREATIVE)"
           : adminModel}{" "}
         | Limit:{" "}
-        {role === "admin_premium"
-          ? "∞"
-          : limits[role]
-          ? `~${Math.round(limits[role] / 5)} ${t("words")}`
+        {role === "admin_premium" ? "∞"
+          : limits[role] ? `~${Math.round(limits[role] / 5)} ${t("words")}`
           : "0"}
       </div>
 
-      {/* EDITOR GRID — OUT on top, IN on bottom */}
-      <div className="editor-grid flex-1 min-h-0" style={{ marginTop: "0.5rem" }}>
+      {/* EDITOR GRID */}
+      <div className="editor-grid" style={{ marginTop: "0.5rem" }}>
 
         {/* OUTPUT PANEL */}
         <div className="panel">
           <div className="panel-header">{t("output")}</div>
           <div className="textarea-wrapper">
-            {/* Scrollable output div */}
-            <div
-              style={{
-                flex: 1,
-                width: "100%",
-                height: "100%",
-                padding: "0.75rem 1rem",
-                boxSizing: "border-box",
-                color: "white",
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                overflowY: "scroll",
-                scrollbarWidth: "thin",
-                scrollbarColor: "#9ca3af #1f2937",
-                background: "transparent",
-              }}
-            >
+            <div style={{
+              flex: 1, width: "100%", height: "100%",
+              padding: "0.75rem 1rem", boxSizing: "border-box" as const,
+              color: "white", whiteSpace: "pre-wrap" as const,
+              wordBreak: "break-word" as const, overflowY: "scroll" as const,
+              scrollbarWidth: "thin" as const,
+              scrollbarColor: "#9ca3af #1f2937", background: "transparent",
+            }}>
               {loading ? t("loading") : output || "Tu pojawi się wynik"}
             </div>
             {output && (
-              <button onClick={copyOutput} className="copy-btn">
-                {t("copy")}
-              </button>
+              <button onClick={copyOutput} className="copy-btn">{t("copy")}</button>
             )}
           </div>
           <div className="counter">
@@ -301,20 +231,22 @@ export default function Home() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               className="textarea"
-              style={{
-                paddingTop: "0.75rem",   /* fixes first-line clip */
-              }}
+              style={{ paddingTop: "0.75rem" }}
             />
           </div>
           <div className="counter">
             {t("chars")}: {inputStats.chars} | {t("words")}: {inputStats.words}
           </div>
         </div>
+
       </div>
 
-      {/* ACTION BUTTONS */}
+      {/* ACTIONS — poza editor-grid, zawsze widoczne */}
       <div className="actions">
-        <button onClick={() => handleAction("edytuj")} className="btn btn-edytuj">
+        <button
+          onClick={() => handleAction("edytuj")}
+          className="btn btn-edytuj"
+        >
           {t("edit")}
         </button>
         <button
@@ -336,11 +268,15 @@ export default function Home() {
           {t("translate")} {(role !== "premium" && role !== "admin_premium") && "🔒"}
         </button>
         {role === "admin_premium" && (
-          <button onClick={() => handleAction("research")} className="btn btn-research">
+          <button
+            onClick={() => handleAction("research")}
+            className="btn btn-research"
+          >
             🔍 {t("research")}
           </button>
         )}
       </div>
+
     </div>
   );
 }

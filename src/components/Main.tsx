@@ -2,7 +2,6 @@
 import { useEffect, useState, useRef } from "react";
 
 type Mode = "edytuj" | "skroc" | "formalny";
-
 const MAX_CHARS = 38000;
 
 export default function Main() {
@@ -11,8 +10,6 @@ export default function Main() {
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // 🔥 NOWE
   const [plan, setPlan] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -45,7 +42,6 @@ export default function Main() {
     textareaRef.current?.focus();
   }, []);
 
-  // 🔥 NOWE
   useEffect(() => {
     fetch("/api/user/plan")
       .then(res => res.json())
@@ -92,17 +88,16 @@ export default function Main() {
 
   const charCount = input.length;
   const overLimit = charCount > MAX_CHARS;
-
-  // 🔥 NOWE
   const isFree = !plan;
   const isPro = plan === "pro" || plan === "premium";
 
   return (
     <div className="app-container">
+
+      {/* HEADER */}
       <div className="header">
         <h1 className="title">{t("title")}</h1>
 
-        {/* 🔥 NOWE */}
         <div style={{ fontSize: "12px", opacity: 0.6 }}>
           Plan: {plan || "FREE"}
         </div>
@@ -123,34 +118,40 @@ export default function Main() {
         </div>
       </div>
 
-      <div className="result-section">
-        <h2>{t("result")}</h2>
-        <div className="result-box">
-          {loading ? "Przetwarzam..." : output || "Tu pojawi się wynik"}
-          {output && output.trim() && (
-            <button onClick={copyToClipboard} className="copy-btn">
-              {t("copy")}
-            </button>
-          )}
+      {/* EDITOR GRID — scrolluje wewnętrznie */}
+      <div className="editor-grid">
+
+        <div className="result-section">
+          <h2>{t("result")}</h2>
+          <div className="result-box">
+            {loading ? "Przetwarzam..." : output || "Tu pojawi się wynik"}
+            {output && output.trim() && (
+              <button onClick={copyToClipboard} className="copy-btn">
+                {t("copy")}
+              </button>
+            )}
+          </div>
         </div>
+
+        <div className="input-section">
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Wpisz lub wklej tekst tutaj..."
+            disabled={loading}
+            className="textarea"
+          />
+          <div className="text-right mt-2 text-sm text-gray-400">
+            {charCount} / {MAX_CHARS}
+            {overLimit && <span className="text-red-500 ml-2">przekroczono!</span>}
+          </div>
+        </div>
+
       </div>
 
-      <div className="input-section">
-        <textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Wpisz lub wklej tekst tutaj..."
-          disabled={loading}
-          className="textarea"
-        />
-        <div className="text-right mt-2 text-sm text-gray-400">
-          {charCount} / {MAX_CHARS}
-          {overLimit && <span className="text-red-500 ml-2">przekroczono!</span>}
-        </div>
-      </div>
-
-      <div className="buttons-container">
+      {/* ACTIONS — poza editor-grid, zawsze widoczne na dole */}
+      <div className="actions">
         <button
           onClick={() => handleRun("edytuj")}
           disabled={loading || !input.trim() || overLimit}
@@ -177,6 +178,7 @@ export default function Main() {
       </div>
 
       {error && <p className="error-text mt-4">{error}</p>}
+
     </div>
   );
 }
