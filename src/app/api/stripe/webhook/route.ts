@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { prisma } from "../../../../../lib/prisma";
+
 
 export const runtime = "nodejs";
 
@@ -28,25 +28,17 @@ export async function POST(req: Request) {
   }
 
   if (event.type === "checkout.session.completed") {
-    const session = event.data.object as Stripe.Checkout.Session;
-    const userId = session.metadata?.userId;
-    const plan = session.metadata?.plan;
+  const session = event.data.object as Stripe.Checkout.Session;
+  const userId = session.metadata?.userId;
+  const plan = session.metadata?.plan;
 
-    console.log("PAYMENT SUCCESS:", userId, plan);
+  console.log("PAYMENT SUCCESS:", userId, plan);
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        plan: plan,
-        planExpiresAt:
-          plan === "daypass"
-            ? new Date(Date.now() + 24 * 60 * 60 * 1000)
-            : null,
-      },
-    });
+  (globalThis as any).USER_PLAN = {
+    userId,
+    plan,
+    createdAt: Date.now(),
+  };
 
-    console.log("PLAN SAVED TO DB");
-  }
-
-  return NextResponse.json({ received: true });
+  console.log("PLAN SAVED:", (globalThis as any).USER_PLAN);
 }
