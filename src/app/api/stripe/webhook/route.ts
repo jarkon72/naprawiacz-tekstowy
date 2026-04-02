@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { prisma } from "../../../../lib/prisma";   // ← POPRAWNA ŚCIEŻKA
+import { prisma } from "../../../../../lib/prisma";
 
 export const runtime = "nodejs";
 
