@@ -12,6 +12,9 @@ export default function Main() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // 🔥 NOWE
+  const [plan, setPlan] = useState<string | null>(null);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const t = (key: string) => {
@@ -40,6 +43,15 @@ export default function Main() {
 
   useEffect(() => {
     textareaRef.current?.focus();
+  }, []);
+
+  // 🔥 NOWE
+  useEffect(() => {
+    fetch("/api/user/plan")
+      .then(res => res.json())
+      .then(data => {
+        setPlan(data?.plan || null);
+      });
   }, []);
 
   async function handleRun(mode: Mode) {
@@ -81,10 +93,20 @@ export default function Main() {
   const charCount = input.length;
   const overLimit = charCount > MAX_CHARS;
 
+  // 🔥 NOWE
+  const isFree = !plan;
+  const isPro = plan === "pro" || plan === "premium";
+
   return (
     <div className="app-container">
       <div className="header">
         <h1 className="title">{t("title")}</h1>
+
+        {/* 🔥 NOWE */}
+        <div style={{ fontSize: "12px", opacity: 0.6 }}>
+          Plan: {plan || "FREE"}
+        </div>
+
         <div className="flags">
           <button
             onClick={() => setLang("pl")}
@@ -139,7 +161,7 @@ export default function Main() {
 
         <button
           onClick={() => handleRun("skroc")}
-          disabled={loading || !input.trim() || overLimit}
+          disabled={loading || !input.trim() || overLimit || isFree}
           className="btn btn-skroc"
         >
           {loading ? "..." : "Skróć"}
@@ -147,7 +169,7 @@ export default function Main() {
 
         <button
           onClick={() => handleRun("formalny")}
-          disabled={loading || !input.trim() || overLimit}
+          disabled={loading || !input.trim() || overLimit || !isPro}
           className="btn btn-formalny"
         >
           {loading ? "..." : "Sformalizuj"}
@@ -157,4 +179,4 @@ export default function Main() {
       {error && <p className="error-text mt-4">{error}</p>}
     </div>
   );
-}    
+}
