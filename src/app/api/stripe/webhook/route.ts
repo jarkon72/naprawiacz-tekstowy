@@ -2,7 +2,6 @@ import Stripe from "stripe";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
-
 export const runtime = "nodejs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -28,17 +27,20 @@ export async function POST(req: Request) {
   }
 
   if (event.type === "checkout.session.completed") {
-  const session = event.data.object as Stripe.Checkout.Session;
-  const userId = session.metadata?.userId;
-  const plan = session.metadata?.plan;
+    const session = event.data.object as Stripe.Checkout.Session;
+    const userId = session.metadata?.userId;
+    const plan = session.metadata?.plan;
 
-  console.log("PAYMENT SUCCESS:", userId, plan);
+    console.log("PAYMENT SUCCESS:", userId, plan);
 
-  (globalThis as any).USER_PLAN = {
-    userId,
-    plan,
-    createdAt: Date.now(),
-  };
+    (globalThis as any).USER_PLAN = {
+      userId,
+      plan,
+      createdAt: Date.now(),
+    };
 
-  console.log("PLAN SAVED:", (globalThis as any).USER_PLAN);
+    console.log("PLAN SAVED:", (globalThis as any).USER_PLAN);
+  }
+
+  return new Response("ok");
 }
