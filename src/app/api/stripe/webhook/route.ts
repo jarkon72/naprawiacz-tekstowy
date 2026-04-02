@@ -27,7 +27,6 @@ export async function POST(req: Request) {
     return new Response("Webhook error", { status: 400 });
   }
 
-  // 🔥 TU SIĘ DZIEJE MAGIA
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const userId = session.metadata?.userId;
