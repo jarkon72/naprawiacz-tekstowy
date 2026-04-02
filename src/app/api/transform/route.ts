@@ -5,11 +5,11 @@ import { verifyAdmin } from "@/lib/adminAuth";
 
 export const runtime = "nodejs";
 
-// Rate Limiting
+// ==================== BEZPIECZE?STWO ====================
 const redis = Redis.fromEnv();
 const ratelimit = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(30, "60 s"),
+  limiter: Ratelimit.slidingWindow(30, "60 s"),   // 30 zapytań na minut? na IP
   analytics: true,
 });
 
@@ -33,7 +33,7 @@ function getModel(mode: string, role: string) {
 export async function POST(req: NextRequest) {
   try {
     // ==================== RATE LIMITING ====================
-    const ip = 
+    const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0] ??
       req.headers.get("x-real-ip") ??
       "anonymous";
@@ -42,12 +42,12 @@ export async function POST(req: NextRequest) {
 
     if (!success) {
       return NextResponse.json(
-        { error: "Za du偶o zapyta艅. Spr贸buj za chwil臋 (max 30/min)." },
+        { error: "Za du?o zapytań. Spróbuj za chwil? (max 30/min)." },
         { status: 429 }
       );
     }
 
-    // ==================== BODY ====================
+    // ==================== RESZTA TWOJEGO KODU (bez zmian) ====================
     const body = await req.json();
     const { mode, text, modelOverride } = body;
     const isAdmin = verifyAdmin(req.cookies.get("admin")?.value);
@@ -56,19 +56,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Brak tekstu" }, { status: 400 });
     }
 
-    const safeText = isAdmin ? text : text.length > 50000 ? text.slice(0, 50000) : text;
+    const safeText = isAdmin
+      ? text
+      : text.length > 50000
+      ? text.slice(0, 50000)
+      : text;
 
-    // 馃敶 BLOKADA NAJPIERW (zanim jakiekolwiek API)
     if (mode === "research" && !isAdmin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     let onlineContext = "";
-
-    // 馃敀 TYLKO ADMIN MO呕E U呕Y膯 TAVILY
     if (mode === "research" && isAdmin) {
       try {
-        const queryPrompt = `Stw贸rz kr贸tkie zapytanie do wyszukiwarki na podstawie tekstu:\n${safeText.slice(0, 2000)}`;
+        const queryPrompt = `Stwórz krótkie zapytanie do wyszukiwarki na podstawie tekstu:\n${safeText.slice(0, 2000)}`;
         const qRes = await fetch("http://127.0.0.1:11434/api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -98,11 +99,11 @@ export async function POST(req: NextRequest) {
 
     let prompt = "";
     if (mode === "research") {
-      prompt = `Masz tekst autora oraz dodatkowe informacje z internetu...\n${onlineContext}\n=== TEKST AUTORA ===\n${safeText}\nZwr贸膰 pe艂ny poprawiony tekst.`;
-    } else if (mode === "edytuj") prompt = `Popraw b艂臋dy:\n\n${safeText}`;
-    else if (mode === "skroc") prompt = `Skr贸膰 tekst:\n\n${safeText}`;
-    else if (mode === "formalny") prompt = `Przer贸b tekst na formalny:\n\n${safeText}`;
-    else if (mode === "translate") prompt = `Przet艂umacz na angielski:\n\n${safeText}`;
+      prompt = `Masz tekst autora oraz dodatkowe informacje z internetu...\n${onlineContext}\n=== TEKST AUTORA ===\n${safeText}\nZwró? pe?ny poprawiony tekst.`;
+    } else if (mode === "edytuj") prompt = `Popraw b??dy:\n\n${safeText}`;
+    else if (mode === "skroc") prompt = `Skró? tekst:\n\n${safeText}`;
+    else if (mode === "formalny") prompt = `Przerób tekst na formalny:\n\n${safeText}`;
+    else if (mode === "translate") prompt = `Przet?umacz na angielski:\n\n${safeText}`;
     else return NextResponse.json({ error: "Nieznany tryb" }, { status: 400 });
 
     let model = getModel(mode, isAdmin ? "admin_premium" : "free");
@@ -144,6 +145,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ output: responseText });
   } catch (error) {
     console.error("TRANSFORM ERROR:", error);
-    return NextResponse.json({ error: "B艂膮d serwera" }, { status: 500 });
+    return NextResponse.json({ error: "B??d serwera" }, { status: 500 });
   }
 }
