@@ -47,7 +47,10 @@ export async function POST(req: NextRequest) {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "anonymous";
     const { success } = await ratelimit.limit(ip);
     if (!success) {
-      return NextResponse.json({ error: "Za dużo zapytań. Spróbuj za chwilę (max 30/min)." }, { status: 429 });
+      return NextResponse.json(
+        { error: "Za dużo zapytań. Spróbuj za chwilę (max 30/min)." },
+        { status: 429 }
+      );
     }
 
     const body = await req.json();
@@ -57,50 +60,44 @@ export async function POST(req: NextRequest) {
     const userData = await getUserData(userId);
 
     const plan = userData?.plan || "free";
-    const used = userData?.used || 0;
+
+    let used = userData?.used || 0;
+    let lastUsed = userData?.lastUsed || 0;
+
+// 🔥 RESET CO 30 DNI
+    const now = Date.now();
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+
+   if (!lastUsed || now - lastUsed > THIRTY_DAYS) {
+     used = 0;
+   }
     const limit = LIMITS[plan] || 2000;
 
     if (!text?.trim()) {
       return NextResponse.json({ error: "Brak tekstu" }, { status: 400 });
     }
 
-    const safeText = (plan === "admin_premium" || plan === "premium") 
-      ? text 
-      : text.length > 50000 ? text.slice(0, 50000) : text;
+    const safeText =
+      plan === "admin_premium" || plan === "premium"
+        ? text
+        : text.length > 50000
+        ? text.slice(0, 50000)
+        : text;
 
-    // Blokada limitu
-    if (used >= limit && plan !== "admin_premium") {
-      return NextResponse.json({ error: "Limit słów na dziś został przekroczony." }, { status: 429 });
+    // 🔥 BLOKADA LIMITU (POPRAWNA)
+    if (used + safeText.length > limit && plan !== "admin_premium") {
+      return NextResponse.json(
+        { error: "Limit został przekroczony." },
+        { status: 429 }
+      );
     }
 
-    // ... reszta Twojej logiki bez zmian (research, Tavily, prompt, model itp.)
-    let onlineContext = "";
-    if (mode === "research" && plan === "admin_premium") {
-      // Twój kod z Tavily...
-    }
+    // ===== GENEROWANIE (tymczasowo passthrough) =====
+    let responseText = safeText;
 
-    let prompt = "";
-    if (mode === "research") {
-      prompt = `Masz tekst autora oraz dodatkowe informacje z internetu...\n${onlineContext}\n=== TEKST AUTORA ===\n${safeText}\nZwróć pełny poprawiony tekst.`;
-    } else if (mode === "edytuj") prompt = `Popraw błędy:\n\n${safeText}`;
-    else if (mode === "skroc") prompt = `Skróć tekst:\n\n${safeText}`;
-    else if (mode === "formalny") prompt = `Przerób tekst na formalny:\n\n${safeText}`;
-    else if (mode === "translate") prompt = `Przetłumacz na angielski:\n\n${safeText}`;
-    else return NextResponse.json({ error: "Nieznany tryb" }, { status: 400 });
+    // 🔥 ZAPIS DOPIERO PO SUKCESIE
+    const newUsed = used + safeText.length;
 
-    let model = getModel(mode, plan);
-
-    if (plan === "admin_premium" && modelOverride && modelOverride !== "auto") {
-      // Twój override modeli...
-    }
-
-    let responseText = "";
-    // ... Twój kod z Ollama (bez zmian)
-
-    if (!responseText) responseText = safeText;
-
-    // ZAPISANIE UŻYCIA DO REDIS
-    const newUsed = used + (responseText.length / 4); // przybliżona liczba słów
     await saveUserData(userId, {
       plan,
       used: newUsed,

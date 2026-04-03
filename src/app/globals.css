@@ -34,8 +34,8 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-shrink: 0;
-  padding: 0.75rem 1rem;
+  flex-wrap: wrap; /* 🔥 TO DODAJ */
+  gap: 10px;
 }
 
 .title {
@@ -109,6 +109,9 @@ html, body {
   overflow-y: scroll;
   scrollbar-width: thin;
   scrollbar-color: #1e3a5f #0d1117;
+
+  text-align: left; /* ← DODAJ TO */
+
 }
 
 .textarea::-webkit-scrollbar { width: 6px; }
@@ -249,3 +252,16 @@ html, body {
 
 .flag-btn:hover { background: rgba(255,255,255,0.06); opacity: 1; }
 .flag-btn.active { background: #112240; opacity: 1; }
+
+/* OUTPUT TEXT FIX */
+.result-box,
+.panel .result,
+.output,
+.ait-out {
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+  letter-spacing: normal;
+  word-spacing: normal;
+  line-height: 1.65;
+}
