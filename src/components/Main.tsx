@@ -82,7 +82,7 @@ export default function Main() {
       const res = await fetch("/api/transform", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, text: input, lang, userId }),
+        body: JSON.stringify({ mode, text: input, lang, userId, modelMode }),
       });
 
       const data = await res.json();
@@ -111,13 +111,8 @@ export default function Main() {
   const charCount = input.length;
   const overLimit = charCount > MAX_CHARS;
 
-  const isFree = !plan || plan === "free";
-  const isPro = plan?.startsWith("pro");
-  const isPremium = plan?.startsWith("premium");
   const remaining = Math.max(0, limit - usage);
   const percent = limit > 0 ? Math.min(100, (usage / limit) * 100) : 0;
-  const percentRounded = Math.round(percent);
-  const isBlocked = usage >= limit;
 
   return (
     <div className="app-container">
@@ -128,12 +123,34 @@ export default function Main() {
         <div>
           <h1 className="title">{t("title")}</h1>
 
-          <div style={{ width: "100%", maxWidth: 300, marginTop: 6 }}>
-            Plan: <strong>{plan?.toUpperCase() || "FREE"}</strong> | 
-            Użyte: <strong>{usage}</strong> / {limit} | 
-            Pozostało: <strong>{remaining}</strong>
+          <div style={{ fontSize: "13px", opacity: 0.85, marginTop: 6 }}>
+           Plan: <strong>{plan?.toUpperCase() || "FREE"}</strong> | 
+Użyte: <strong>{usage}</strong> / {limit} | 
+Pozostało: <strong>{remaining}</strong>
 
-            <div style={{ width: 300, marginTop: 6 }}>
+{/* 🔥 TU WKLEJ */}
+<div style={{ marginTop: 6 }}>
+  <select
+    value={modelMode}
+    onChange={(e) => setModelMode(e.target.value as any)}
+    style={{
+      background: "#0d1117",
+      color: "#cbd5e1",
+      border: "1px solid #1a2535",
+      borderRadius: 6,
+      padding: "4px 8px",
+      fontSize: 12
+    }}
+  >
+    <option value="auto">🤖 Auto</option>
+    <option value="fast">⚡ Szybki</option>
+    <option value="quality">🎯 Dokładny</option>
+    <option value="creative">✨ Kreatywny</option>
+  </select>
+</div>
+
+{/* PROGRESS BAR */}
+<div style={{ width: "100%", maxWidth: 300, marginTop: 6 }}>
               <div style={{
                 height: 6,
                 background: "#1a2535",
@@ -141,10 +158,31 @@ export default function Main() {
                 overflow: "hidden"
               }}>
                 <div style={{
-                  width: `${percent}%`,
-                  height: "100%",
-                  background: percent > 90 ? "#ef4444" : percent > 70 ? "#f59e0b" : "#22c55e"
-                }} />
+  width: `${Math.max(percent, 3)}%`,
+  height: "100%",
+  background: percent > 90 ? "#ef4444" : percent > 70 ? "#f59e0b" : "#22c55e",
+  transition: "width 0.4s ease",
+
+  boxShadow:
+    percent > 90
+      ? "0 0 12px #ef4444, 0 0 24px #ef4444"
+      : percent > 70
+      ? "0 0 10px #f59e0b"
+      : "none",
+
+  animation: percent > 90 ? "pulse 1s infinite" : "none",
+}} />
+
+animation: percent > 90 ? "pulse 1s infinite" : "none",
+
+  // 🔥 GLOW
+  boxShadow:
+    percent > 90
+      ? "0 0 12px #ef4444, 0 0 24px #ef4444"
+      : percent > 70
+      ? "0 0 10px #f59e0b"
+      : "none"
+}} />
               </div>
             </div>
           </div>

@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { mode, text, modelOverride, userId: clientUserId, lang } = body;
+    const { mode, text, modelOverride, userId: clientUserId, lang, modelMode } = body;
 
     const userId = clientUserId || "anonymous";
     const userData = await getUserData(userId);
@@ -64,13 +64,30 @@ export async function POST(req: NextRequest) {
     let used = userData?.used || 0;
     let lastUsed = userData?.lastUsed || 0;
 
-// 🔥 RESET CO 30 DNI
-    const now = Date.now();
-    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    const nowDate = new Date();
+    const last = lastUsed ? new Date(lastUsed) : null;
 
-   if (!lastUsed || now - lastUsed > THIRTY_DAYS) {
-     used = 0;
-   }
+    // 🔥 DAILY RESET (24H)
+    if (plan === "daypass") {
+      if (!last || nowDate.getTime() - last.getTime() > 24 * 60 * 60 * 1000) {
+        used = 0;
+      }
+    }
+
+    // 🔥 MONTHLY RESET
+    else if (plan.includes("monthly")) {
+      if (!last || nowDate.getMonth() !== last.getMonth() || nowDate.getFullYear() !== last.getFullYear()) {
+        used = 0;
+      }
+    }
+
+    // 🔥 YEARLY RESET
+    else if (plan.includes("yearly")) {
+      if (!last || nowDate.getFullYear() !== last.getFullYear()) {
+        used = 0;
+      }
+    }
+
     const limit = LIMITS[plan] || 2000;
 
     if (!text?.trim()) {
@@ -84,7 +101,7 @@ export async function POST(req: NextRequest) {
         ? text.slice(0, 50000)
         : text;
 
-    // 🔥 BLOKADA LIMITU (POPRAWNA)
+    // 🔥 LIMIT CHECK
     if (used + safeText.length > limit && plan !== "admin_premium") {
       return NextResponse.json(
         { error: "Limit został przekroczony." },
@@ -92,10 +109,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ===== GENEROWANIE (tymczasowo passthrough) =====
+    // ===== MODEL WYBÓR =====
+    let model = getModel(mode, plan);
+
+    if (plan === "daypass") {
+      if (modelMode === "fast") model = "qwen2.5:latest";
+      if (modelMode === "quality") model = "trurl-13b-q6:latest";
+    }
+
+    // ===== GENEROWANIE (na razie passthrough) =====
     let responseText = safeText;
 
-    // 🔥 ZAPIS DOPIERO PO SUKCESIE
+    // ===== SAVE USAGE =====
     const newUsed = used + safeText.length;
 
     await saveUserData(userId, {
@@ -105,6 +130,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ output: responseText });
+
   } catch (error) {
     console.error("TRANSFORM ERROR:", error);
     return NextResponse.json({ error: "Błąd serwera" }, { status: 500 });
