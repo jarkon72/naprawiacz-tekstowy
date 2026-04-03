@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
+import { getUserId } from "@/lib/user";
 
 type Mode = "edytuj" | "skroc" | "formalny";
+
 const MAX_CHARS = 38000;
 
 export default function Main() {
@@ -11,6 +13,8 @@ export default function Main() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [plan, setPlan] = useState<string | null>(null);
+  const [usage, setUsage] = useState<number>(0);
+  const [limit, setLimit] = useState<number>(1500);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -42,17 +46,34 @@ export default function Main() {
     textareaRef.current?.focus();
   }, []);
 
+  // Ładowanie danych użytkownika (plan + usage)
   useEffect(() => {
-    fetch("/api/user/plan")
-      .then(res => res.json())
-      .then(data => {
-        setPlan(data?.plan || null);
-      });
+    const loadUserData = async () => {
+      const userId = await getUserId();
+      const res = await fetch(`/api/usage?userId=${userId}`);
+      const data = await res.json();
+
+      setPlan(data.plan || "free");
+      setUsage(data.used || 0);
+      setLimit(data.limit || 1500);
+    };
+
+    loadUserData();
+    const interval = setInterval(loadUserData, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   async function handleRun(mode: Mode) {
-    if (!input.trim()) return setError(t("noText"));
-    if (input.length > MAX_CHARS) return setError("Tekst za długi");
+    if (!input.trim()) {
+      setError(t("noText"));
+      return;
+    }
+    if (input.length > MAX_CHARS) {
+      setError("Tekst jest za długi");
+      return;
+    }
+
+    const userId = await getUserId();
 
     setLoading(true);
     setError("");
@@ -62,18 +83,20 @@ export default function Main() {
       const res = await fetch("/api/transform", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, text: input, lang }),
+        body: JSON.stringify({ mode, text: input, lang, userId }),
       });
 
       const data = await res.json();
 
       if (data.error) {
-        throw new Error(data.error);
+        setError(data.error);
+        setOutput("");
+        return;
       }
 
       setOutput(data.output || "Brak wyniku");
     } catch (err: any) {
-      setError(err.message || "Błąd przetwarzania");
+      setError(err.message || "Błąd połączenia");
       setOutput("");
     } finally {
       setLoading(false);
@@ -88,18 +111,22 @@ export default function Main() {
 
   const charCount = input.length;
   const overLimit = charCount > MAX_CHARS;
-  const isFree = !plan;
-  const isPro = plan === "pro" || plan === "premium";
+
+  const isFree = !plan || plan === "free";
+  const isPro = plan?.startsWith("pro");
+  const isPremium = plan?.startsWith("premium");
+  const remaining = Math.max(0, limit - usage);
 
   return (
     <div className="app-container">
-
       {/* HEADER */}
       <div className="header">
         <h1 className="title">{t("title")}</h1>
-
-        <div style={{ fontSize: "12px", opacity: 0.6 }}>
-          Plan: {plan || "FREE"}
+        
+        <div style={{ fontSize: "13px", opacity: 0.85, textAlign: "center" }}>
+          Plan: <strong>{plan?.toUpperCase() || "FREE"}</strong> | 
+          Użyte: <strong>{usage}</strong> / {limit} | 
+          Pozostało: <strong>{remaining}</strong>
         </div>
 
         <div className="flags">
@@ -118,9 +145,8 @@ export default function Main() {
         </div>
       </div>
 
-      {/* EDITOR GRID — scrolluje wewnętrznie */}
+      {/* EDITOR GRID */}
       <div className="editor-grid">
-
         <div className="result-section">
           <h2>{t("result")}</h2>
           <div className="result-box">
@@ -147,10 +173,9 @@ export default function Main() {
             {overLimit && <span className="text-red-500 ml-2">przekroczono!</span>}
           </div>
         </div>
-
       </div>
 
-      {/* ACTIONS — poza editor-grid, zawsze widoczne na dole */}
+      {/* ACTIONS */}
       <div className="actions">
         <button
           onClick={() => handleRun("edytuj")}
@@ -170,15 +195,14 @@ export default function Main() {
 
         <button
           onClick={() => handleRun("formalny")}
-          disabled={loading || !input.trim() || overLimit || !isPro}
+          disabled={loading || !input.trim() || overLimit || !(isPro || isPremium)}
           className="btn btn-formalny"
         >
           {loading ? "..." : "Sformalizuj"}
         </button>
       </div>
 
-      {error && <p className="error-text mt-4">{error}</p>}
-
+      {error && <p className="error-text mt-4 text-red-500">{error}</p>}
     </div>
   );
 }
