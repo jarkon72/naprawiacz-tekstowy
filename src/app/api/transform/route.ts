@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
-import { getUserData, saveUserData } from "@/lib/user";
+import { getUserId, getUserData, saveUserData } from "@/lib/user";
+import { applyReset, LIMITS } from "@/lib/resetUsage";
 
 export const runtime = "nodejs";
-
-// Rate Limiting
 const redis = Redis.fromEnv();
 const ratelimit = new Ratelimit({
   redis,
@@ -13,15 +12,18 @@ const ratelimit = new Ratelimit({
   analytics: true,
 });
 
-function getModel(mode: string, role: string) {
-  if (mode === "research" && role !== "admin_premium") return "qwen2.5:latest";
-  if (role === "free" || role === "day" || role === "standard") return "qwen2.5:latest";
-  if (role === "pro") return "qwen2.5:latest";
-  if (role === "premium") {
+function getModel(mode: string, plan: string, selectedModel?: string) {
+  // If user explicitly selected a model, use it
+  if (selectedModel && selectedModel !== "auto") return selectedModel;
+
+  if (mode === "research" && plan !== "admin_premium") return "qwen2.5:latest";
+  if (plan === "free" || plan === "day" || plan === "standard") return "qwen2.5:latest";
+  if (plan === "pro") return "qwen2.5:latest";
+  if (plan === "premium") {
     if (mode === "edytuj" || mode === "formalny") return "trurl-13b-q6:latest";
     return "qwen2.5:latest";
   }
-  if (role === "admin_premium") {
+  if (plan === "admin_premium") {
     if (mode === "research") return "qwen2.5:14b";
     if (mode === "edytuj" || mode === "formalny") return "trurl-13b-q6:latest";
     if (mode === "translate") return "llama3.1:8b";
@@ -29,17 +31,6 @@ function getModel(mode: string, role: string) {
   }
   return "qwen2.5:latest";
 }
-
-const LIMITS: Record<string, number> = {
-  free: 2000,
-  daypass: 20000,
-  standard_monthly: 8000,
-  standard_yearly: 8000,
-  pro_monthly: 20000,
-  pro_yearly: 20000,
-  premium_monthly: 80000,
-  premium_yearly: 80000,
-};
 
 export async function POST(req: NextRequest) {
   try {
@@ -53,69 +44,64 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = await req.json();
-    const { mode, text, userId: clientUserId, modelMode } = body;
-
-    const userId = clientUserId || "anonymous";
+    // ✅ userId zawsze z cookie — nigdy z body
+    const userId = await getUserId();
     const userData = await getUserData(userId);
 
     const plan = userData?.plan || "free";
+    const lastUsed = userData?.lastUsed || null;
 
-    let used = userData?.used || 0;
-    let lastUsed = userData?.lastUsed || 0;
-
-    const nowDate = new Date();
-    const last = lastUsed ? new Date(lastUsed) : null;
-
-    // RESETY
-    if (plan === "daypass") {
-      if (!last || nowDate.getTime() - last.getTime() > 24 * 60 * 60 * 1000) {
-        used = 0;
-      }
-    } else if (plan.includes("monthly")) {
-      if (!last || nowDate.getMonth() !== last.getMonth() || nowDate.getFullYear() !== last.getFullYear()) {
-        used = 0;
-      }
-    } else if (plan.includes("yearly")) {
-      if (!last || nowDate.getFullYear() !== last.getFullYear()) {
-        used = 0;
-      }
+    // Apply period reset (daily / monthly / yearly)
+    const { used, shouldSave } = applyReset(plan, userData?.used || 0, lastUsed);
+    if (shouldSave) {
+      await saveUserData(userId, { plan, used: 0, lastUsed });
     }
 
-    const limit = LIMITS[plan] || 2000;
+    const limit = LIMITS[plan] ?? 2000;
+
+    const body = await req.json();
+    const { mode, text, model: selectedModel } = body;
 
     if (!text?.trim()) {
       return NextResponse.json({ error: "Brak tekstu" }, { status: 400 });
     }
 
-    const safeText =
-      plan === "admin_premium" || plan === "premium"
-        ? text
-        : text.length > 50000
-        ? text.slice(0, 50000)
-        : text;
+    const safeText = text.length > 50000 ? text.slice(0, 50000) : text;
 
-    if (used + safeText.length > limit && plan !== "admin_premium") {
+    // ✅ Blokada po przekroczeniu limitu
+    if (plan !== "admin_premium" && used >= limit) {
       return NextResponse.json(
-        { error: "Limit został przekroczony." },
+        {
+          error: "LIMIT_EXCEEDED",
+          message: "Limit znaków został wyczerpany.",
+          used,
+          limit,
+        },
         { status: 429 }
       );
     }
 
-    // ===== MODEL =====
-    let model = getModel(mode, plan);
+    // ✅ Blokada gdy tekst przekroczyłby limit
+    if (plan !== "admin_premium" && used + safeText.length > limit) {
+      return NextResponse.json(
+        {
+          error: "LIMIT_EXCEEDED",
+          message: `Tekst jest za długi. Pozostało ${limit - used} znaków.`,
+          used,
+          limit,
+          remaining: limit - used,
+        },
+        { status: 429 }
+      );
+    }
 
-    const selectedMode = modelMode || "auto";
-
-    if (selectedMode === "fast") model = "qwen2.5:latest";
-    if (selectedMode === "quality") model = "trurl-13b-q6:latest";
-    if (selectedMode === "creative") model = "llama3.1:8b";
+    const model = getModel(mode, plan, selectedModel);
 
     // ===== GENEROWANIE =====
-    let responseText = safeText;
+    // TODO: wywołanie Ollama/LLM tutaj
+    let responseText = safeText; // placeholder
 
     const newUsed = used + safeText.length;
-
     await saveUserData(userId, {
       plan,
       used: newUsed,

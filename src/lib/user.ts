@@ -5,13 +5,11 @@ import { v4 as uuidv4 } from "uuid";
 const redis = Redis.fromEnv();
 
 export async function getUserId() {
-  const cookieStore = await cookies(); // 🔥 FIX
-
+  const cookieStore = await cookies();
   let userId = cookieStore.get("userId")?.value;
 
   if (!userId) {
     userId = uuidv4();
-
     cookieStore.set("userId", userId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -25,13 +23,15 @@ export async function getUserId() {
 
 export async function getUserData(userId: string) {
   const data = await redis.get(`user:${userId}`);
-  return data ? JSON.parse(data as string) : null;
+  if (!data) return null;
+  // Upstash zwraca już sparsowany obiekt, ale obsługujemy też string na wszelki wypadek
+  return typeof data === "string" ? JSON.parse(data) : data;
 }
 
 export async function saveUserData(userId: string, data: any) {
   await redis.set(
     `user:${userId}`,
-    JSON.stringify(data),
-    { ex: 60 * 60 * 24 * 30 } // 30 dni
+    data, // Upstash serializuje automatycznie
+    { ex: 60 * 60 * 24 * 400 } // 400 dni — pokrywa plany roczne + bufor
   );
 }
