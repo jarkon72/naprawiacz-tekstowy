@@ -130,18 +130,8 @@ export default function Main() {
         </div>
 
         <div className="flags">
-          <button
-            onClick={() => setLang("pl")}
-            className={`flag-btn ${lang === "pl" ? "active" : ""}`}
-          >
-            🇵🇱
-          </button>
-          <button
-            onClick={() => setLang("en")}
-            className={`flag-btn ${lang === "en" ? "active" : ""}`}
-          >
-            🇬🇧
-          </button>
+          <button onClick={() => setLang("pl")} className={`flag-btn ${lang === "pl" ? "active" : ""}`}>🇵🇱</button>
+          <button onClick={() => setLang("en")} className={`flag-btn ${lang === "en" ? "active" : ""}`}>🇬🇧</button>
         </div>
       </div>
 
@@ -152,9 +142,7 @@ export default function Main() {
           <div className="result-box">
             {loading ? "Przetwarzam..." : output || "Tu pojawi się wynik"}
             {output && output.trim() && (
-              <button onClick={copyToClipboard} className="copy-btn">
-                {t("copy")}
-              </button>
+              <button onClick={copyToClipboard} className="copy-btn">{t("copy")}</button>
             )}
           </div>
         </div>
@@ -202,7 +190,7 @@ export default function Main() {
         </button>
       </div>
 
-      {error && <p className="error-text mt-4 text-red-500">{error}</p>}
+      {error && <p className="error-text mt-4 text-red-500 font-medium">{error}</p>}
     </div>
   );
 }
