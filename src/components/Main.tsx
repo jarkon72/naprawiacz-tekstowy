@@ -16,7 +16,6 @@ export default function Main() {
   const [usage, setUsage] = useState<number>(0);
   const [limit, setLimit] = useState<number>(1500);
 
-  // 🔥 MODEL SELECTOR
   const [modelMode, setModelMode] = useState("auto");
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -114,27 +113,6 @@ export default function Main() {
             Użyte: <strong>{usage}</strong> / {limit} | 
             Pozostało: <strong>{remaining}</strong>
 
-            {/* SELECTOR */}
-            <div style={{ marginTop: 6 }}>
-              <select
-                value={modelMode}
-                onChange={(e) => setModelMode(e.target.value)}
-                style={{
-                  background: "#0d1117",
-                  color: "#cbd5e1",
-                  border: "1px solid #1a2535",
-                  borderRadius: 6,
-                  padding: "4px 10px",
-                  fontSize: 12
-                }}
-              >
-                <option value="auto">Auto</option>
-                <option value="fast">⚡ Fast</option>
-                <option value="quality">🎯 Quality</option>
-                <option value="creative">✨ Creative</option>
-              </select>
-            </div>
-
             {/* PROGRESS BAR */}
             <div style={{ width: "100%", maxWidth: 300, marginTop: 6 }}>
               <div style={{
@@ -164,6 +142,20 @@ export default function Main() {
         </div>
 
       </div>
+
+      {/* 🔥 SELECTOR PRZENIESIONY TU */}
+      <div style={{ textAlign: "center", marginTop: 10 }}>
+        <select
+          value={modelMode}
+          onChange={(e) => setModelMode(e.target.value)}
+        >
+          <option value="auto">Auto</option>
+          <option value="fast">⚡ Fast</option>
+          <option value="quality">🎯 Quality</option>
+          <option value="creative">✨ Creative</option>
+        </select>
+      </div>
+
     </div>
   );
 }
