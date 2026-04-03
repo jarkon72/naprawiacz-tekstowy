@@ -43,9 +43,9 @@ const LIMITS: Record<string, number> = {
 
 export async function POST(req: NextRequest) {
   try {
-    // Rate Limiting
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "anonymous";
     const { success } = await ratelimit.limit(ip);
+
     if (!success) {
       return NextResponse.json(
         { error: "Za dużo zapytań. Spróbuj za chwilę (max 30/min)." },
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { mode, text, modelOverride, userId: clientUserId, lang, modelMode } = body;
+    const { mode, text, userId: clientUserId, modelMode } = body;
 
     const userId = clientUserId || "anonymous";
     const userData = await getUserData(userId);
@@ -67,22 +67,16 @@ export async function POST(req: NextRequest) {
     const nowDate = new Date();
     const last = lastUsed ? new Date(lastUsed) : null;
 
-    // 🔥 DAILY RESET (24H)
+    // RESETY
     if (plan === "daypass") {
       if (!last || nowDate.getTime() - last.getTime() > 24 * 60 * 60 * 1000) {
         used = 0;
       }
-    }
-
-    // 🔥 MONTHLY RESET
-    else if (plan.includes("monthly")) {
+    } else if (plan.includes("monthly")) {
       if (!last || nowDate.getMonth() !== last.getMonth() || nowDate.getFullYear() !== last.getFullYear()) {
         used = 0;
       }
-    }
-
-    // 🔥 YEARLY RESET
-    else if (plan.includes("yearly")) {
+    } else if (plan.includes("yearly")) {
       if (!last || nowDate.getFullYear() !== last.getFullYear()) {
         used = 0;
       }
@@ -101,7 +95,6 @@ export async function POST(req: NextRequest) {
         ? text.slice(0, 50000)
         : text;
 
-    // 🔥 LIMIT CHECK
     if (used + safeText.length > limit && plan !== "admin_premium") {
       return NextResponse.json(
         { error: "Limit został przekroczony." },
@@ -109,18 +102,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ===== MODEL WYBÓR =====
+    // ===== MODEL =====
     let model = getModel(mode, plan);
 
-    if (plan === "daypass") {
-      if (modelMode === "fast") model = "qwen2.5:latest";
-      if (modelMode === "quality") model = "trurl-13b-q6:latest";
-    }
+    const selectedMode = modelMode || "auto";
 
-    // ===== GENEROWANIE (na razie passthrough) =====
+    if (selectedMode === "fast") model = "qwen2.5:latest";
+    if (selectedMode === "quality") model = "trurl-13b-q6:latest";
+    if (selectedMode === "creative") model = "llama3.1:8b";
+
+    // ===== GENEROWANIE =====
     let responseText = safeText;
 
-    // ===== SAVE USAGE =====
     const newUsed = used + safeText.length;
 
     await saveUserData(userId, {
