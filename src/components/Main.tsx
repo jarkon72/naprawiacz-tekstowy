@@ -16,7 +16,7 @@ export default function Main() {
   const [usage, setUsage] = useState<number>(0);
   const [limit, setLimit] = useState<number>(1500);
 
-  // 🔥 FIX
+  // 🔥 MODEL SELECTOR
   const [modelMode, setModelMode] = useState("auto");
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -124,11 +124,11 @@ export default function Main() {
                   color: "#cbd5e1",
                   border: "1px solid #1a2535",
                   borderRadius: 6,
-                  padding: "4px 8px",
+                  padding: "4px 10px",
                   fontSize: 12
                 }}
               >
-                <option value="auto">🤖 Auto</option>
+                <option value="auto">Auto</option>
                 <option value="fast">⚡ Fast</option>
                 <option value="quality">🎯 Quality</option>
                 <option value="creative">✨ Creative</option>
