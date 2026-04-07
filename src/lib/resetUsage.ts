@@ -1,6 +1,4 @@
 // lib/resetUsage.ts
-// Shared reset logic — used in both /api/usage and /api/transform
-
 export type PlanKey =
   | "free"
   | "daypass"
@@ -24,10 +22,6 @@ export const LIMITS: Record<string, number> = {
   admin_premium:     Infinity,
 };
 
-/**
- * Returns { used, shouldSave }
- * shouldSave = true means used was reset and caller should persist it
- */
 export function applyReset(
   plan: string,
   used: number,
@@ -38,6 +32,17 @@ export function applyReset(
   const now = new Date();
   const last = new Date(lastUsed);
 
+  // FREE — reset każdego dnia
+  if (plan === "free") {
+    const sameDay =
+      now.getDate() === last.getDate() &&
+      now.getMonth() === last.getMonth() &&
+      now.getFullYear() === last.getFullYear();
+    if (!sameDay) {
+      return { used: 0, shouldSave: true };
+    }
+  }
+
   // 24H — daypass
   if (plan === "daypass") {
     const diffMs = now.getTime() - last.getTime();
@@ -46,7 +51,7 @@ export function applyReset(
     }
   }
 
-  // Monthly — Standard / Pro / Premium _monthly
+  // Monthly
   if (plan.endsWith("_monthly")) {
     const sameMonth =
       now.getMonth() === last.getMonth() &&
@@ -56,7 +61,7 @@ export function applyReset(
     }
   }
 
-  // Yearly — Standard / Pro / Premium _yearly
+  // Yearly
   if (plan.endsWith("_yearly")) {
     if (now.getFullYear() !== last.getFullYear()) {
       return { used: 0, shouldSave: true };
@@ -66,27 +71,25 @@ export function applyReset(
   return { used, shouldSave: false };
 }
 
-/**
- * Human-readable info about when usage resets
- */
 export function getResetInfo(plan: string, lastUsed: number | null): string {
   if (!lastUsed) return "";
   const last = new Date(lastUsed);
 
+  if (plan === "free") {
+    const resetsAt = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1);
+    return `Reset: ${resetsAt.toLocaleDateString("pl-PL", { day: "numeric", month: "long" })}`;
+  }
   if (plan === "daypass") {
     const resetsAt = new Date(last.getTime() + 24 * 60 * 60 * 1000);
     return `Reset: ${resetsAt.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}`;
   }
-
   if (plan.endsWith("_monthly")) {
     const resetsAt = new Date(last.getFullYear(), last.getMonth() + 1, 1);
     return `Reset: ${resetsAt.toLocaleDateString("pl-PL", { day: "numeric", month: "long" })}`;
   }
-
   if (plan.endsWith("_yearly")) {
     const resetsAt = new Date(last.getFullYear() + 1, 0, 1);
     return `Reset: 1 stycznia ${resetsAt.getFullYear()}`;
   }
-
   return "";
 }

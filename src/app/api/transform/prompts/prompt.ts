@@ -1,120 +1,76 @@
 // src/app/api/transform/prompts/prompt.ts
-
 export function getPrompt(
-  mode: "edytuj" | "skroc" | "formalny" | "translate" | "research",
+  mode: "edytuj" | "skroc" | "formalny" | "translate" | "tlumacz" | "research",
   text: string,
   onlineContext?: string
 ): string {
-
-  const fence = "===TEXT===";
-
   switch (mode) {
 
-    // ─── FREE / DAY / STANDARD / PRO / PREMIUM / ADMIN ──────────────────────
     case "edytuj":
-      return `You are a precise Polish text editor. Your only job is to fix errors and return the corrected text.
+      return `Jesteś korektorem tekstu. Popraw TYLKO błędy ortograficzne, gramatyczne i interpunkcyjne w poniższym tekście.
 
-STRICT RULES:
-- Fix ALL spelling, grammar, punctuation, and stylistic errors in the text below.
-- Do NOT change the author's meaning, tone, or sentence structure unless it is grammatically broken.
-- Do NOT add new content, summaries, or commentary.
-- Do NOT write any introduction like "Here is the corrected text:" — return ONLY the fixed text.
-- If a sentence is already correct, leave it exactly as is.
-- Output must be in the same language as input.
+Zrób:
+- popraw błędy językowe i interpunkcję
+- usuń powtórzenia i zbędne słowa
+- skracaj zdania i popraw ich rytm
+- zastępuj słabe, sztuczne lub abstrakcyjne fragmenty lepszymi i bardziej naturalnymi
+- popraw miejsca, które brzmią nienaturalnie
+- usuwaj powtórzenia tego samego słowa w jednym zdaniu lub obok siebie
 
-${fence}
-${text}
-${fence}
+Zachowaj:
+- sens, ton i wszystkie informacje
+- konkret i obrazowość
 
-Return only the corrected text. Nothing else.`;
+Nie rób:
+- nie dodawaj nowych treści ani interpretacji
+- nie rozbudowuj tekstu
+- nie zmieniaj znaczenia tekstu
+- nie zamieniaj konkretów na ogólniki
+- nie używaj żadnych znaków specjalnych ani wyróżnień
 
-    // ─── DAY / STANDARD / PRO / PREMIUM / ADMIN ─────────────────────────────
+Zwróć WYŁĄCZNIE poprawiony tekst. Bez komentarzy, bez nagłówków, bez wyjaśnień.
+
+TEKST DO KOREKTY:
+${text}`.trim();
+
     case "skroc":
-      return `You are a precise text editor. Your only job is to shorten the text and return it.
+      return `Jesteś redaktorem. Skróć poniższy tekst do około 15% jego długości, zachowując najważniejsze informacje i styl autora. Zwróć TYLKO skrócony tekst, bez komentarzy.
 
-STRICT RULES:
-- Shorten the text to approximately 50% of its original length.
-- Keep the most important ideas and the author's core message.
-- Do NOT add new content.
-- Do NOT write any introduction — return ONLY the shortened text.
-- Preserve the original language (Polish or English).
-- Do not use bullet points unless the original used them.
+TEKST:
+${text}`.trim();
 
-${fence}
-${text}
-${fence}
-
-Return only the shortened text. Nothing else.`;
-
-    // ─── STANDARD / PRO / PREMIUM / ADMIN ───────────────────────────────────
     case "formalny":
-      return `You are a professional language editor. Your only job is to rewrite the text in a formal, professional register and return it.
+      return `Jesteś redaktorem języka polskiego. Przepisz poniższy tekst w formalnym, profesjonalnym stylu odpowiednim dla dokumentów biznesowych lub akademickich. Usuń kolokwializmy i nieformalny język. Nie zmieniaj sensu. Zwróć TYLKO przepisany tekst, bez komentarzy.
 
-STRICT RULES:
-- Rewrite the text in a formal, professional style suitable for business or academic use.
-- Remove all colloquialisms, slang, informal expressions, and contractions.
-- Do NOT change the meaning or omit content.
-- Do NOT add new content, summaries, or commentary.
-- Do NOT write any introduction — return ONLY the rewritten text.
-- Preserve the original language (Polish or English).
-- Maintain the same paragraph structure as the original.
+TEKST:
+${text}`.trim();
 
-${fence}
-${text}
-${fence}
-
-Return only the formalized text. Nothing else.`;
-
-    // ─── PREMIUM / ADMIN ─────────────────────────────────────────────────────
     case "translate":
-      return `You are a professional translator. Your only job is to translate the text and return it.
+    case "tlumacz":
+      return `Jesteś tłumaczem. Przetłumacz poniższy tekst: jeśli jest po polsku — przetłumacz na angielski; jeśli jest po angielsku — przetłumacz na polski. Zachowaj styl i ton autora. Zwróć TYLKO przetłumaczony tekst, bez komentarzy.
 
-STRICT RULES:
-- Detect the language of the input text automatically.
-- If it is Polish → translate to English.
-- If it is English → translate to Polish.
-- Preserve the author's tone, style, and meaning precisely.
-- Do NOT summarize, shorten, or add content.
-- Do NOT write any introduction — return ONLY the translation.
-- Preserve paragraph structure.
+TEKST:
+${text}`.trim();
 
-${fence}
-${text}
-${fence}
-
-Return only the translated text. Nothing else.`;
-
-    // ─── ADMIN ONLY ──────────────────────────────────────────────────────────
     case "research": {
       const safeText = text.trim();
       const contextBlock = onlineContext
-        ? `VERIFIED FACTS FROM THE WEB (use these to enrich the text):\n${onlineContext}\n\n`
+        ? `Zweryfikowane fakty z internetu (użyj ich do wzbogacenia tekstu):\n${onlineContext}\n\n`
         : "";
+      return `Jesteś polskim redaktorem, ghostwriterem i badaczem. Wzbogać poniższy tekst, dodając brakujące fakty, kontekst i szczegóły — pisząc w stylu i głosem autora.
 
-      return `You are a professional Polish editor, ghostwriter, and researcher. \
-Your job is to enrich and complete the author's text by adding missing facts, \
-context, and details — written entirely in the author's own voice and style.
+ZASADY:
+1. Zachowaj każde zdanie autora w niezmienionej formie.
+2. Dodaj brakujące fakty, daty, nazwiska, liczby, przyczyny i konsekwencje — pisząc jak autor.
+3. Wstawiaj nowe zdania naturalnie w miejscach, gdzie brakuje informacji.
+4. Wynik MUSI być dłuższy niż oryginał.
+5. Zwróć TYLKO wzbogacony tekst, bez komentarzy i wstępów.
 
-STRICT RULES:
-1. READ the author's text carefully. Identify their writing style: sentence length, \
-vocabulary level, tone (formal/informal/journalistic/literary), and rhythm.
-2. KEEP every sentence the original author wrote. Do NOT delete, shorten, or rephrase \
-their words unless there is a clear grammatical error.
-3. ADD missing facts, dates, names, numbers, causes, consequences, or context — \
-but write them as if the author wrote them. Match their voice exactly.
-4. EXPAND naturally: insert new sentences or clauses directly where the gap exists \
-in the original flow. Do not append a block of new text at the end.
-5. If web facts are provided below, use them. If not, use your own knowledge. \
-Never invent facts — only add what is verifiably true.
-6. The output MUST be longer than the input. If the input is 100 words, output at least 150.
-7. Do NOT write any introduction, meta-comment, or explanation — return ONLY the enriched text.
-8. Preserve the original language (Polish or English).
-
-${contextBlock}${fence}
-${safeText}
-${fence}
-
-Return only the enriched text written in the author's voice. Nothing else.`;
+${contextBlock}TEKST:
+${safeText}`.trim();
     }
+
+    default:
+      throw new Error(`Nieobsługiwany tryb: ${mode}`);
   }
 }
