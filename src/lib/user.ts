@@ -2,7 +2,12 @@ import { Redis } from "@upstash/redis";
 import { cookies } from "next/headers";
 import { v4 as uuidv4 } from "uuid";
 
-const redis = Redis.fromEnv();
+function getRedis() {
+  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+    throw new Error("Upstash Redis env variables are not set");
+  }
+  return Redis.fromEnv();
+}
 
 export async function getUserId() {
   const cookieStore = await cookies();
@@ -22,16 +27,17 @@ export async function getUserId() {
 }
 
 export async function getUserData(userId: string) {
+  const redis = getRedis();
   const data = await redis.get(`user:${userId}`);
   if (!data) return null;
-  // Upstash zwraca już sparsowany obiekt, ale obsługujemy też string na wszelki wypadek
   return typeof data === "string" ? JSON.parse(data) : data;
 }
 
 export async function saveUserData(userId: string, data: any) {
+  const redis = getRedis();
   await redis.set(
     `user:${userId}`,
-    data, // Upstash serializuje automatycznie
-    { ex: 60 * 60 * 24 * 400 } // 400 dni — pokrywa plany roczne + bufor
+    data,
+    { ex: 60 * 60 * 24 * 400 } // 400 dni
   );
 }

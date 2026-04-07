@@ -1,6 +1,4 @@
 "use client";
-<h1 className="title">Poprawiacz tekstu v2</h1>
-
 import { useEffect, useState } from "react";
 
 type Mode = "edytuj" | "skroc" | "formalny" | "tlumacz" | "research";
@@ -42,7 +40,7 @@ export default function Home() {
   const [role, setRole] = useState<Role>("standard");
   const [selectedModel, setSelectedModel] = useState<string>("");
 
-  // Ustaw model przy każdej zmianie roli
+  // Aktualizacja modelu przy zmianie roli
   useEffect(() => {
     const models = MODEL_OPTIONS[role];
     if (models && models.length > 0) {
@@ -50,7 +48,7 @@ export default function Home() {
     }
   }, [role]);
 
-  // Ustaw model przy pierwszym załadowaniu strony
+  // Ustawienie początkowego modelu
   useEffect(() => {
     const models = MODEL_OPTIONS[role];
     if (models && models.length > 0 && !selectedModel) {
@@ -64,6 +62,8 @@ export default function Home() {
       return;
     }
 
+    console.log("=== KLIKNIĘTO EDYTUJ ===", { mode, selectedModel, textLength: input.length });
+
     setLoading(true);
     setOutput("Przetwarzam...");
 
@@ -75,14 +75,15 @@ export default function Home() {
       });
 
       const data = await res.json();
+      console.log("Odpowiedź z API:", data);
 
       if (data.error) {
         setOutput(`Błąd: ${data.error}`);
       } else {
         setOutput(data.output || "Brak wyniku z modelu.");
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("Fetch error:", err);
       setOutput("Błąd połączenia z serwerem.");
     } finally {
       setLoading(false);
@@ -99,7 +100,7 @@ export default function Home() {
     <div className="app-container">
 
       <div className="header">
-        <h1 className="title">Poprawiacz tekstu</h1>
+        <h1 className="title">Poprawiacz tekstu v2</h1>
       </div>
 
       {/* PLAN BUTTONS */}

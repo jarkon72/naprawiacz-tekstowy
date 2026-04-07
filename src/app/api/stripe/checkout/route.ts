@@ -3,10 +3,16 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY is not set");
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY);
+}
 
 export async function POST(req: NextRequest) {
   try {
+    const stripe = getStripe();
     const body = await req.json();
     const { plan, userId, email, currency } = body;
 
@@ -90,8 +96,8 @@ export async function POST(req: NextRequest) {
         plan,
       },
 
-      success_url: "http://localhost:3000?success=true",
-      cancel_url: "http://localhost:3000?canceled=true",
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}?success=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}?canceled=true`,
     });
 
     return NextResponse.json({ url: session.url });
